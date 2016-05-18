@@ -1,0 +1,18 @@
+# Release config file for java/com/rocketfuel/common/message.
+
+"common.message": {
+    "group_id": "com.rocketfuel.common.message",
+    "artifact_id": "common.message",
+    "base_version": "102.16.0",
+    "release_owners": ["group:SERVING_INFRA"],
+
+    "jar-no-dependencies": {
+        "target": "mool.java.com.rocketfuel.common.message.CommonMessageNoDeps",
+        "artifact_path": "java/com/rocketfuel/common/message/CommonMessageNoDeps.jar"
+    },
+
+    "jar-with-dependencies": {
+        "target": "mool.java.com.rocketfuel.common.message.CommonMessage",
+        "artifact_path": "java/com/rocketfuel/common/message/CommonMessage.jar"
+    }
+}

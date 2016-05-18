@@ -1,0 +1,105 @@
+# Build file for java/com/rocketfuel/common/message/protobuf.
+
+"AdPricesMessageProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "ad_prices_message.proto"
+    ]
+},
+
+"AdLogProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "adlog.proto"
+    ],
+    "deps": [
+        ".AdPricesMessageProto"
+    ]
+},
+
+"ApolloProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "apollo.proto"
+    ],
+    "deps": [
+        ".DatetimeProto"
+    ]
+},
+
+"BidDataMessageProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "bid_data_message.proto"
+    ]
+},
+
+"CookieGroupProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "cookie-group.proto"
+    ]
+},
+
+"DatetimeProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "datetime.proto"
+    ]
+},
+
+"ModelingDataMessageProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "modeling_data_message.proto"
+    ]
+},
+
+"ModelingScoreMessageProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "modeling_score_message.proto"
+    ]
+},
+
+"PageContextProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "page_context.proto"
+    ]
+},
+
+"RTBidProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "rtbid.proto"
+    ]
+},
+
+"TacticDeliveryStatsProto": {
+    "rule_type": "java_proto_lib",
+    "srcs": [
+        "tactic_delivery_stats.proto"
+    ]
+},
+
+"ProtobufAll": {
+    "rule_type": "java_lib",
+    "deps": [
+        ".AdPricesMessageProto",
+        ".AdLogProto",
+        ".ApolloProto",
+        ".BidDataMessageProto",
+        ".CookieGroupProto",
+        ".DatetimeProto",
+        ".ModelingDataMessageProto",
+        ".ModelingScoreMessageProto",
+        ".PageContextProto",
+        ".RTBidProto",
+        ".TacticDeliveryStatsProto",
+        "mool.java.com.rocketfuel.common.message.protobuf.artemis.ArtemisSchemaProto",
+        "mool.java.com.rocketfuel.common.message.protobuf.epiphany.ActionRecord",
+        "mool.java.com.rocketfuel.common.message.protobuf.epiphany.AttributionResult",
+        "mool.java.com.rocketfuel.common.message.protobuf.hbase.HBaseProtobufAll"
+    ]
+}

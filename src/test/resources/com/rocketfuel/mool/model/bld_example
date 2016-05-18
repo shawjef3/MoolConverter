@@ -1,0 +1,15 @@
+# Build rules for java/com/rocketfuel/server.
+
+# Libraries.
+"ServerProtoAll": {
+    "rule_type": "java_lib",
+    "deps": [
+        "mool.java.com.rocketfuel.server.exchanges.brl.BrlProto",
+        "mool.java.com.rocketfuel.server.exchanges.openx.OpenxApiProto",
+        "mool.java.com.rocketfuel.server.exchanges.openx.SsrtbProto",
+        "mool.java.com.rocketfuel.server.rfi.bidder.adx.RealTimeBiddingProto",
+        "mool.java.com.rocketfuel.server.rfi.bidder.adx.SnippetStatusReportProto",
+        "mool.java.com.rocketfuel.server.rfi.server.adselect.AdMessagesProto",
+        "mool.java.com.rocketfuel.server.rfi.server.adselect.MobilePayloadProto"
+    ]
+}

@@ -1,0 +1,12 @@
+# Build rules for java/mvn/commons-collections.
+
+# Libraries.
+"CommonsCollections": {
+    "rule_type": "java_lib",
+    "maven_specs": {
+        "artifact_id": "commons-collections",
+        "group_id": "commons-collections",
+        "repo_url": "http://nexus.rfiserve.net/content/groups/public",
+        "version": "3.2.1"
+    }
+}

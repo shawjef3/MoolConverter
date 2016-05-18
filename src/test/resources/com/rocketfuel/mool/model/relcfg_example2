@@ -1,0 +1,32 @@
+"test_rule_with_all_sections": {
+	"group_id": "test.group.id",
+	"artifact_id": "test.artifact",
+	"base_version": "2.3.4",
+	"release_owners": ["group:ALL", "user:some_ldap"],
+	"jar-no-dependencies": {
+		"target": "mool.common.releaseutils.test_data.SomeJarNoDeps",
+		"artifact_path": "common/releaseutils/test_data/SomeJarNoDeps.jar"
+	},
+	"jar-with-dependencies": {
+		"target": "mool.common.releaseutils.test_data.SomeJar",
+		"artifact_path": "common/releaseutils/test_data/SomeJar.jar"
+	},
+	"deploy": {
+		"target": "mool.common.releaseutils.test_data.SomePkg",
+		"artifact_path": "common/releaseutils/test_data/SomePkg.zip",
+		"deployment_path": "data.vostok/common.releaseutils.test_data.SomePkg",
+		"destinations": ["machine:inw-xx.rfiserve.net", "machine:eqv-yy.rfiserve.net", "machinegroup:example_service"]
+	}
+},
+"test_rule_with_deployment_section": {
+	"group_id": "test.group.id",
+	"artifact_id": "test.artifact",
+	"base_version": "4.0.0",
+	"release_owners": ["group:ALL", "user:some_ldap"],
+	"deploy": {
+		"target": "mool.common.releaseutils.test_data.SomePkg",
+		"artifact_path": "common/releaseutils/test_data/SomePkg.zip",
+		"deployment_path": "data.vostok/common.releaseutils.test_data.SomePkg",
+		"destinations": ["machine:inw-xx.rfiserve.net", "machine:eqv-yy.rfiserve.net", "machinegroup:example_service"]
+	}
+}
