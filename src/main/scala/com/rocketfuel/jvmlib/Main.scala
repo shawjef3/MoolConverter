@@ -9,7 +9,7 @@ object Main extends App {
   val models = Model.ofMoolRelCfgs(moolModel)
 
   for (model <- models) {
-    println(model.artifactId + ": " + model.files)
+    println(model)
   }
 
 }

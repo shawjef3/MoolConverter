@@ -16,6 +16,17 @@ case class Model(
 
 object Model {
 
+  implicit class PathParts(pathString: String) {
+    private lazy val splitPathString =
+      pathString.split('.').toVector
+
+    def pathParts: Vector[String] =
+      splitPathString.drop(1).dropRight(1)
+
+    def pathName: String =
+      splitPathString.last
+  }
+
   sealed trait Dependency
 
   object Dependency {
@@ -61,6 +72,7 @@ object Model {
 
   /**
     * Create a Model for each BLD.
+    *
     * @param model
     * @return
     */
@@ -82,11 +94,13 @@ object Model {
       withDeps <- relCfg.`jar-with-dependencies`
       targetBldParts = withDeps.target.split('.').toVector
       if targetBldParts.startsWith(Vector("mool", "java"))
-      targetBldPath = targetBldParts.drop(1).dropRight(1)
-      withDepsName = targetBldParts.last
-      blds <- moolModel.blds.get(targetBldPath)
-      bld <- blds.get(withDepsName)
     } yield {
+
+      val targetBldPath = targetBldParts.drop(1).dropRight(1)
+      val withDepsName = targetBldParts.last
+      val blds = moolModel.blds(targetBldPath)
+      val bld = blds(withDepsName)
+
       val dependencies =
         dependenciesOfBld(moolModel)(path, bld)
 
@@ -107,6 +121,7 @@ object Model {
 
   /**
     * Create a Model for each RelCfg.
+    *
     * @param model
     * @return
     */
@@ -114,11 +129,11 @@ object Model {
     for {
       (path, relCfgs) <- model.relCfgs
       (name, relCfg) <- relCfgs
-      model <- ofMoolRelCfg(model)(path, name, relCfg)
+      model <- ofMoolRelCfg(model)(path, name, relCfg).toVector
     } yield model
   }
 
-  def dependenciesOfBld(moolModel: mool.Model)(path: Vector[String], bld: mool.Bld) = {
+  def dependenciesOfBld(moolModel: mool.Model)(path: Vector[String], bld: mool.Bld): Vector[Dependency] = {
     for {
       deps <- bld.deps.toVector
       dep <- deps
@@ -167,6 +182,26 @@ object Model {
       }
 
     paths.toSet
+  }
+
+  /**
+    * Get the source dependencies of a relcfg. Look in all its dependencies transitively, up to the point where a
+    * dependency is required by a different relcfg.
+    *
+    * @param moolModel
+    * @param path
+    * @param bld
+    * @return
+    */
+  def transitiveSourcePathsOfBld(moolModel: mool.Model)(path: Vector[String], name: String, bld: mool.Bld): Set[Path] = {
+    for {
+      dependency <- bld.deps.toVector.flatten
+    } yield {
+      val dependencyPath = dependency.pathParts
+      val dependencyName = dependency.pathName
+      if (moolModel.relCfgs.contains(dependencyPath) && moolModel.relCfgs(dependencyPath).contains(dependencyName)) Set.empty
+      else
+    }
   }
 
 }

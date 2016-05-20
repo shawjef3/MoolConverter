@@ -35,7 +35,14 @@ object RelCfg {
   case class Artifact(
     target: String,
     artifact_path: String
-  )
+  ) {
+    val (targetPath, targetName) = {
+      val splitTarget =
+        target.split('.').toVector
+
+      (splitTarget.drop(1).dropRight(1), splitTarget.last)
+    }
+  }
 
   object Artifact {
     implicit val decodeJson: CodecJson[Artifact] =
