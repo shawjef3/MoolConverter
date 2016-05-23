@@ -84,10 +84,10 @@ object Model {
       val bld = moolModel.blds(targetBldPath)
 
       val dependencies =
-        dependenciesOfBld(moolModel)(path)
+        dependenciesOfBld(moolModel)(targetBldPath)
 
       val sourcePaths =
-        sourcePathsOfBld(moolModel)(path, bld)
+        sourcePathsOfBld(moolModel)(targetBldPath, bld)
 
       Model(
         groupId = relCfg.group_id,

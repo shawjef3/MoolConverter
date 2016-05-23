@@ -31,15 +31,15 @@ case class Bld(
     } yield bldDir.resolve(src)
   }
 
-  lazy val depPaths: Vector[MoolPath] =
+  def depPaths(bldPath: MoolPath): Vector[MoolPath] =
     for {
       dep <- deps.getOrElse(Vector.empty)
-    } yield Bld.path(dep)
+    } yield Bld.relativePath(bldPath, dep)
 
-  lazy val compileDepPaths: Vector[MoolPath] =
+  def compileDepPaths(bldPath: MoolPath): Vector[MoolPath] =
     for {
       compileDep <- compileDeps.getOrElse(Vector.empty)
-    } yield Bld.path(compileDep)
+    } yield Bld.relativePath(bldPath, compileDep)
 }
 
 object Bld {
@@ -60,10 +60,27 @@ object Bld {
 
   /**
     * Split a string by '.', and drop the leading "mool" element.
+    *
+    * If the pathString starts with a '.', it is relative, and so it
+    * is appended to the localMoolPath.
+    *
     * @param pathString
     * @return
     */
-  def path(pathString: String): Vector[String] = {
+  def relativePath(localMoolPath: MoolPath, pathString: String): Vector[String] = {
+    if (pathString.head == '.') localMoolPath.dropRight(1) :+ pathString.tail
+    else {
+      val split = pathString.split('.').toVector
+      split.drop(1)
+    }
+  }
+
+  /**
+    * Split by '.', and drop the leading "mool".
+    * @param pathString
+    * @return
+    */
+  def absolutePath(pathString: String): Vector[String] = {
     val split = pathString.split('.').toVector
     split.drop(1)
   }

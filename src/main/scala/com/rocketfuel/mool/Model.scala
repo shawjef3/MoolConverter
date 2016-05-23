@@ -18,7 +18,7 @@ case class Model(
     for {
       (bldPath, bld) <- blds
     } yield {
-      bldPath -> bld.depPaths.toSet
+      bldPath -> bld.depPaths(bldPath).toSet
     }
   }
 
@@ -31,10 +31,10 @@ case class Model(
         case None =>
           accumulator
 
-        case Some(depPath) =>
-          val depBld = blds(depPath)
-          val depPaths = depBld.deps.getOrElse(Vector.empty).map(Bld.path)
-          val newDepPaths = depPaths.filter(! accumulator.contains(_))
+        case Some(bldPath) =>
+          val bld = blds(bldPath)
+          val depPaths = bld.depPaths(bldPath)
+          val newDepPaths = depPaths.toSet -- accumulator
 
           val newAccumulator = accumulator ++ newDepPaths
           val newStack = bldStack.tail ++ newDepPaths

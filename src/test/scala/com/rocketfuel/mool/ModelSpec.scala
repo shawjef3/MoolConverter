@@ -9,9 +9,9 @@ class ModelSpec extends FunSuite {
   val bld23StringPath = "mool.java.2.3"
   val bld45StringPath = "mool.java.4.5"
 
-  val bld01Path = Bld.path(bld01StringPath)
-  val bld23Path = Bld.path(bld23StringPath)
-  val bld45Path = Bld.path(bld45StringPath)
+  val bld01Path = Bld.absolutePath(bld01StringPath)
+  val bld23Path = Bld.absolutePath(bld23StringPath)
+  val bld45Path = Bld.absolutePath(bld45StringPath)
 
   val relCfg0Path = RelCfg.path("0")
 
