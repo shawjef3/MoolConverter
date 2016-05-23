@@ -10,29 +10,17 @@ case class Model(
   version: String,
   repository: Option[String],
   scalaVersion: Option[String],
-  dependencies: Vector[Model.Dependency],
-  files: Set[Path]
+  dependencies: Set[Model.Dependency],
+  files: Vector[Path]
 )
 
 object Model {
-
-  implicit class PathParts(pathString: String) {
-    private lazy val splitPathString =
-      pathString.split('.').toVector
-
-    def pathParts: Vector[String] =
-      splitPathString.drop(1).dropRight(1)
-
-    def pathName: String =
-      splitPathString.last
-  }
 
   sealed trait Dependency
 
   object Dependency {
     case class Local(
-      path: Vector[String],
-      name: String
+      path: Vector[String]
     ) extends Dependency
 
     case class Remote(
@@ -45,18 +33,16 @@ object Model {
   def ofMoolBld(
     moolModel: mool.Model
   )(path: Vector[String],
-    name: String,
     bld: mool.Bld
   ): Option[Model] = {
     val dependencies =
-      dependenciesOfBld(moolModel)(path, bld)
+      dependenciesOfBld(moolModel)(path)
 
     val sourcePaths =
       sourcePathsOfBld(moolModel)(path, bld)
 
     for {
-      pathRelCfgs <- moolModel.relCfgs.get(path)
-      relCfg <- pathRelCfgs.get(name)
+      relCfg <- moolModel.relCfgs.get(path)
     } yield {
       Model(
         groupId = relCfg.group_id,
@@ -78,16 +64,14 @@ object Model {
     */
   def ofMoolBlds(model: mool.Model): Iterable[Model] = {
     for {
-      (path, blds) <- model.blds
-      (name, bld) <- blds
-      model <- ofMoolBld(model)(path, name, bld)
+      (path, bld) <- model.blds
+      model <- ofMoolBld(model)(path, bld)
     } yield model
   }
 
   def ofMoolRelCfg(
     moolModel: mool.Model
   )(path: Vector[String],
-    name: String,
     relCfg: RelCfg
   ): Option[Model] = {
     for {
@@ -96,13 +80,11 @@ object Model {
       if targetBldParts.startsWith(Vector("mool", "java"))
     } yield {
 
-      val targetBldPath = targetBldParts.drop(1).dropRight(1)
-      val withDepsName = targetBldParts.last
-      val blds = moolModel.blds(targetBldPath)
-      val bld = blds(withDepsName)
+      val targetBldPath = targetBldParts.drop(1)
+      val bld = moolModel.blds(targetBldPath)
 
       val dependencies =
-        dependenciesOfBld(moolModel)(path, bld)
+        dependenciesOfBld(moolModel)(path)
 
       val sourcePaths =
         sourcePathsOfBld(moolModel)(path, bld)
@@ -127,33 +109,16 @@ object Model {
     */
   def ofMoolRelCfgs(model: mool.Model): Iterable[Model] = {
     for {
-      (path, relCfgs) <- model.relCfgs
-      (name, relCfg) <- relCfgs
-      model <- ofMoolRelCfg(model)(path, name, relCfg).toVector
+      (path, relCfg) <- model.relCfgs
+      model <- ofMoolRelCfg(model)(path, relCfg).toVector
     } yield model
   }
 
-  def dependenciesOfBld(moolModel: mool.Model)(path: Vector[String], bld: mool.Bld): Vector[Dependency] = {
+  def dependenciesOfBld(moolModel: mool.Model)(path: Vector[String]): Set[Dependency] = {
     for {
-      deps <- bld.deps.toVector
-      dep <- deps
+      depPath <- moolModel.bldsToBlds(path)
     } yield {
-      val depParts =
-        if (dep.startsWith(".")) {
-          //A dependency starting with '.' is relative.
-          //Drop the leading '.' and append the name to the path.
-          path :+ dep.drop(1)
-        }
-        else {
-          //The dependency path is absolute.
-          //drop the leading "mool"
-          dep.split('.').drop(1).toVector
-        }
-      val depPath = depParts.dropRight(1)
-      val depName = depParts.last
-      val depPathBlds = moolModel.blds(depPath)
-      val depBld = depPathBlds(depName)
-
+      val depBld = moolModel.blds(depPath)
 
       depBld.maven_specs match {
         case Some(mavenSpecs) =>
@@ -163,45 +128,32 @@ object Model {
             version = mavenSpecs.version
           )
         case None =>
-          Dependency.Local(
-            path = depPath,
-            name = depName
-          )
+          Dependency.Local(depPath)
       }
     }
   }
 
-  def sourcePathsOfBld(moolModel: mool.Model)(path: Vector[String], bld: mool.Bld): Set[Path] = {
-    val paths =
-      for {
-        sources <- bld.srcs.toVector
-        source <- sources
-      } yield {
-        val sourceRelativePath = path :+ source
-        moolModel.root.resolve(sourceRelativePath.mkString("/"))
-      }
-
-    paths.toSet
+  def sourcePathsOfBld(moolModel: mool.Model)(path: Vector[String], bld: mool.Bld): Vector[Path] = {
+    bld.srcPaths(moolModel, path)
   }
 
   /**
-    * Get the source dependencies of a relcfg. Look in all its dependencies transitively, up to the point where a
-    * dependency is required by a different relcfg.
+    * Get the source dependencies of a relcfg. Look in all its dependencies transitively.
     *
     * @param moolModel
     * @param path
     * @param bld
     * @return
     */
-  def transitiveSourcePathsOfBld(moolModel: mool.Model)(path: Vector[String], name: String, bld: mool.Bld): Set[Path] = {
-    for {
-      dependency <- bld.deps.toVector.flatten
-    } yield {
-      val dependencyPath = dependency.pathParts
-      val dependencyName = dependency.pathName
-      if (moolModel.relCfgs.contains(dependencyPath) && moolModel.relCfgs(dependencyPath).contains(dependencyName)) Set.empty
-      else
-    }
-  }
+//  def transitiveSourcePathsOfBld(moolModel: mool.Model)(path: Vector[String], name: String, bld: mool.Bld): Set[Path] = {
+//    for {
+//      dependency <- bld.deps.toVector.flatten
+//    } yield {
+//      val dependencyPath = dependency.pathParts
+//      val dependencyName = dependency.pathName
+//      if (moolModel.relCfgs.contains(dependencyPath) && moolModel.relCfgs(dependencyPath).contains(dependencyName)) Set.empty
+//      else
+//    }
+//  }
 
 }

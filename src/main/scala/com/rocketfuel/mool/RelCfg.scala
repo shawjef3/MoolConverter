@@ -8,8 +8,8 @@ case class RelCfg(
   group_id: String,
   artifact_id: String,
   base_version: String,
-  `jar-no-dependencies`: Option[RelCfg.Artifact],
-  `jar-with-dependencies`: Option[RelCfg.Artifact]
+  `jar-no-dependencies`: Option[RelCfg.Artifact] = None,
+  `jar-with-dependencies`: Option[RelCfg.Artifact] = None
 ) {
 
 }
@@ -32,16 +32,22 @@ object RelCfg {
     decodeResult.toOption.get
   }
 
+  /**
+    * Split a string by '.'. RelCfgs don't start with "mool", so unlike with BLDs,
+    * there is no need to drop the first element.
+    * @param pathString
+    * @return
+    */
+  def path(pathString: String): Vector[String] = {
+    pathString.split('.').toVector
+  }
+
   case class Artifact(
     target: String,
     artifact_path: String
   ) {
-    val (targetPath, targetName) = {
-      val splitTarget =
-        target.split('.').toVector
-
-      (splitTarget.drop(1).dropRight(1), splitTarget.last)
-    }
+    val targetPath =
+      Bld.path(target)
   }
 
   object Artifact {

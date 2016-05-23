@@ -15,12 +15,32 @@ import java.nio.file.{Files, Path}
   */
 case class Bld(
   rule_type: String,
-  srcs: Option[Vector[String]],
-  deps: Option[Vector[String]],
-  compileDeps: Option[Vector[String]],
-  scala_version: Option[String],
-  maven_specs: Option[Bld.MavenSpecs]
-)
+  srcs: Option[MoolPath] = None,
+  deps: Option[Vector[String]] = None,
+  compileDeps: Option[Vector[String]] = None,
+  scala_version: Option[String] = None,
+  maven_specs: Option[Bld.MavenSpecs] = None
+) {
+  def srcPaths(model: Model, bldPath: MoolPath): Vector[Path] =
+    srcPaths(model.root, bldPath)
+
+  def srcPaths(root: Path, bldPath: MoolPath): Vector[Path] = {
+    val bldDir = bldPath.foldLeft(root)(_.resolve(_))
+    for {
+      src <- srcs.getOrElse(Vector.empty)
+    } yield bldDir.resolve(src)
+  }
+
+  lazy val depPaths: Vector[MoolPath] =
+    for {
+      dep <- deps.getOrElse(Vector.empty)
+    } yield Bld.path(dep)
+
+  lazy val compileDepPaths: Vector[MoolPath] =
+    for {
+      compileDep <- compileDeps.getOrElse(Vector.empty)
+    } yield Bld.path(compileDep)
+}
 
 object Bld {
 
@@ -36,6 +56,16 @@ object Bld {
       Parse.decode[Map[String, Bld]]("{" + fileString + "}")
 
     decodeResult.toOption.get
+  }
+
+  /**
+    * Split a string by '.', and drop the leading "mool" element.
+    * @param pathString
+    * @return
+    */
+  def path(pathString: String): Vector[String] = {
+    val split = pathString.split('.').toVector
+    split.drop(1)
   }
 
   case class MavenSpecs(

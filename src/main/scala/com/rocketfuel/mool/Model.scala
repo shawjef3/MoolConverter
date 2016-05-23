@@ -6,63 +6,72 @@ import scala.collection.mutable
 
 case class Model(
   root: Path,
-  blds: Map[Vector[String], Map[String, Bld]],
-  relCfgs: Map[Vector[String], Map[String, RelCfg]],
-  versions: Map[Vector[String], Set[Version]]
+  blds: Map[MoolPath, Bld],
+  relCfgs: Map[MoolPath, RelCfg],
+  versions: Map[MoolPath, Set[Version]]
 ) {
 
   /**
-    * Given a path to a relcfg, get all the paths to bld files the relcfg references.
+    * Given a path to a bld, get all the paths to blds that it depends on. Intransitive.
     */
-  val relCfgsToBlds: Map[(Vector[String], String), Vector[(Vector[String], String)]] = {
+  val bldsToBlds: Map[MoolPath, Set[MoolPath]] = {
     for {
-      (path, pathRelCfgs) <- relCfgs
-      (name, relCfg) <- pathRelCfgs
+      (bldPath, bld) <- blds
     } yield {
-      ((path, name), relCfg.`jar-with-dependencies`.toVector.flatMap(artifact => Vector((artifact.targetPath, artifact.targetName))))
-    }
-  }
-
-  /**
-    * Given a bld, get all the paths to blds that it depends on. Intransitive.
-    */
-  val bldsToBlds: Map[(Vector[String], String), Vector[(Vector[String], String)]] = {
-    for {
-      (bldPath, pathBlds) <- blds
-      (bldName, bld) <- pathBlds
-    } yield {
-      val deps =
-        for {
-          dep <- bld.deps.getOrElse(Vector.empty)
-        } yield {
-          val depParts = dep.split('.').toVector
-          val depPath = depParts.drop(1).dropRight(1)
-          (depPath, depParts.last)
-        }
-      (bldPath, bldName) -> deps
+      bldPath -> bld.depPaths.toSet
     }
   }
 
   /**
     * Given a path to a bld, get all the paths to blds that it depends on. Transitive.
-    *
-    * The values are streams, because they will be infinite when there is a
-    * circular dependency.
     */
-  val bldToBldsTransitive: Map[(Vector[String], String), Stream[(Vector[String], String)]] = {
-    def aux(bldPath: Vector[String], bldName: String): Stream[(Vector[String], String)] = {
-      val bld = blds(bldPath)(bldName)
-      val immediateDependencies = bld.deps.getOrElse(Vector.empty).toStream.map{dependency =>
-        val split = dependency.split('.').toVector
-        (split.drop(1).dropRight(1), split.last)
+  val bldToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
+    def aux(accumulator: Set[MoolPath], bldStack : Vector[MoolPath]): Set[MoolPath] = {
+      bldStack.headOption match {
+        case None =>
+          accumulator
+
+        case Some(depPath) =>
+          val depBld = blds(depPath)
+          val depPaths = depBld.deps.getOrElse(Vector.empty).map(Bld.path)
+          val newDepPaths = depPaths.filter(! accumulator.contains(_))
+
+          val newAccumulator = accumulator ++ newDepPaths
+          val newStack = bldStack.tail ++ newDepPaths
+          aux(newAccumulator, newStack)
       }
-      immediateDependencies ++ immediateDependencies.flatMap(pathAndName => bldToBldsTransitive(pathAndName._1, pathAndName._2))
     }
 
     for {
-      (bldPath, pathBlds) <- blds
-      (bldName, _) <- pathBlds
-    } yield (bldPath, bldName) -> aux(bldPath, bldName)
+      (bldPath, _) <- blds
+    } yield bldPath -> aux(Set.empty, Vector(bldPath))
+  }
+
+  /**
+    * Given a path to a bld, get all the paths to relcfgs that directly reference the bld.
+    */
+  val bldsToRelCfgs: Map[MoolPath, Set[MoolPath]] = {
+    for {
+      (bldPath, _) <- blds
+    } yield {
+      val bldRelCfgs =
+        for {
+          (relCfgPath, relCfg) <- relCfgs
+          if relCfg.`jar-with-dependencies`.exists(target => target.targetPath == bldPath)
+        } yield relCfgPath
+      bldPath -> bldRelCfgs.toSet
+    }
+  }
+
+  /**
+    * Given a path to a relcfg, get the path to bld file the relcfg references.
+    */
+  val relCfgsToBld: Map[MoolPath, Option[MoolPath]] = {
+    for {
+      (path, relCfg) <- relCfgs
+    } yield {
+      (path, relCfg.`jar-with-dependencies`.map(_.targetPath))
+    }
   }
 
   /**
@@ -71,40 +80,23 @@ case class Model(
     * The values are streams, because they will be infinite when there is a
     * circular dependency.
     */
-  val relCfgsToBldsTransitive: Map[(Vector[String], String), Stream[(Vector[String], String)] = {
-    def aux(relCfgPath: Vector[String], relCfgName: String): Stream[(Vector[String], String)] = {
-      val relCfg = relCfgs(relCfgPath)(relCfgName)
+  val relCfgsToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
+    for {
+      (relCfgPath, _) <- relCfgs
+    } yield relCfgPath -> {
+      val relCfg = relCfgs(relCfgPath)
       for {
-        bld <- relCfg.`jar-with-dependencies`.toStream
-        transitiveDependency <- (bld.targetPath, bld.targetName) #:: bldToBldsTransitive(bld.targetPath, bld.targetName)
+        bld <- relCfg.`jar-with-dependencies`.toSet[RelCfg.Artifact]
+        transitiveDependency <- bldToBldsTransitive(bld.targetPath) + bld.targetPath
       } yield transitiveDependency
     }
-
-    for {
-      (relCfgPath, pathRelCfgs) <- relCfgs
-      (relCfgName, _) <- pathRelCfgs
-    } yield (relCfgPath, relCfgName) -> aux(relCfgPath, relCfgName)
   }
 
   /**
-    * Given a path to a bld, get all the paths to relcfgs that directly reference the bld.
+    * Given a path to a bld, get all the relcfgs that depend on it, following
+    * transitive bld dependencies.
     */
-  val bldsToRelCfgs: Map[(Vector[String], String), Vector[(Vector[String], String)]] = {
-    for {
-      (bldPath, pathBlds) <- blds
-      (bldName, _) <- pathBlds
-    } yield {
-      val bldRelCfgs =
-        for {
-          (relCfgPath, pathRelCfgs) <- relCfgs.toVector
-          (relCfgName, relCfg) <- pathRelCfgs.toVector
-          if relCfg.`jar-with-dependencies`.exists(target => target.targetPath == bldPath && target.targetName == bldName)
-        } yield (relCfgPath, relCfgName)
-      (bldPath, bldName) -> bldRelCfgs
-    }
-  }
-
-  val bldsToRelCfgsTransitive: Map[(Vector[String], String), Iterable[(Vector[String], String)]] = {
+  val bldsToRelCfgsTransitive: Map[MoolPath, Set[MoolPath]] = {
     val one =
       for {
         (relCfg, blds) <- relCfgsToBldsTransitive
@@ -113,7 +105,7 @@ case class Model(
     val grouped = one.groupBy(_._1)
     grouped.map {
       case (key, value) =>
-        (key, value.values)
+        (key, value.map(_._2).toSet)
     }
   }
 
@@ -130,14 +122,18 @@ object Model {
       for (bldFile <- bldFiles) yield {
         val blds = Bld.of(repo.resolve(bldFile))
         val bldPathParts = bldFile.split("/").dropRight(1).toVector
-        bldPathParts -> blds
+        for {
+          (bldName, bld) <- blds
+        } yield (bldPathParts :+ bldName) -> bld
       }
 
     val relCfgs =
       for (relCfgFile <- relCfgFiles) yield {
         val relCfgs = RelCfg.of(repo.resolve(relCfgFile))
         val relCfgPathParts = relCfgFile.split("/").dropRight(1).toVector
-        relCfgPathParts -> relCfgs
+        for {
+          (relCfgName, relCfg) <- relCfgs
+        } yield (relCfgPathParts :+ relCfgName) -> relCfg
       }
 
     val versions =
@@ -149,8 +145,8 @@ object Model {
 
     Model(
       root = repo,
-      blds = blds.toMap,
-      relCfgs = relCfgs.toMap,
+      blds = blds.foldLeft(Map.empty[MoolPath, Bld])(_ ++ _),
+      relCfgs = relCfgs.foldLeft(Map.empty[MoolPath, RelCfg])(_ ++ _),
       versions = versions.toMap
     )
   }
