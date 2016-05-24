@@ -3,12 +3,12 @@ package com.rocketfuel.jvmlib
 import com.rocketfuel.mool
 import java.nio.file._
 
-object Main extends App {
+object MainPrintSources extends App {
 
-  val moolModel = mool.Model.ofRepository(Paths.get(System.getProperty("user.home") + "/git/data/vostok"))
+  val moolModel = mool.Model.ofRepository(Paths.get(System.getProperty("user.home")).resolve("git/data/vostok"))
 
   for {
-    model <- Model.ofMoolRelCfgs(moolModel)
+    (modelPath, model) <- Model.ofMoolRelCfgs(moolModel)
   } {
     println(model.artifactId)
     val depFiles = for {

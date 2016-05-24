@@ -2,7 +2,7 @@ package com.rocketfuel.jvmlib
 
 import com.rocketfuel.mool
 import com.rocketfuel.mool.RelCfg
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 
 case class Model(
   groupId: String,
@@ -12,7 +12,16 @@ case class Model(
   scalaVersion: Option[String],
   dependencies: Set[Model.Dependency],
   files: Vector[Path]
-)
+) {
+  def pathsToCopy(originRoot: Path, destinationRoot: Path): Vector[(Path, Path)] = {
+    for (file <- files) yield {
+      val relative = originRoot.relativize(file)
+      val destinationFile = destinationRoot.resolve(relative)
+      Files.createDirectories(destinationFile)
+      (file, destinationFile)
+    }
+  }
+}
 
 object Model {
 
@@ -62,11 +71,11 @@ object Model {
     * @param model
     * @return
     */
-  def ofMoolBlds(model: mool.Model): Iterable[Model] = {
+  def ofMoolBlds(model: mool.Model): Map[Vector[String], Model] = {
     for {
       (path, bld) <- model.blds
       model <- ofMoolBld(model)(path, bld)
-    } yield model
+    } yield path -> model
   }
 
   def ofMoolRelCfg(
@@ -107,11 +116,11 @@ object Model {
     * @param model
     * @return
     */
-  def ofMoolRelCfgs(model: mool.Model): Iterable[Model] = {
+  def ofMoolRelCfgs(model: mool.Model): Map[Vector[String], Model] = {
     for {
       (path, relCfg) <- model.relCfgs
-      model <- ofMoolRelCfg(model)(path, relCfg).toVector
-    } yield model
+      model <- ofMoolRelCfg(model)(path, relCfg)
+    } yield path -> model
   }
 
   def dependenciesOfBld(moolModel: mool.Model)(path: Vector[String]): Set[Dependency] = {
