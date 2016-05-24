@@ -23,6 +23,27 @@ case class Model(
   }
 
   /**
+    * Given a path to a bld, get all the paths to testing blds that depend on it.
+    * Intransitive.
+    *
+    * This is used to pull test classes into the same project as a bld that is targeted
+    * by a relcfg, because relcfgs never reference a testing bld.
+    */
+  val testBlds: Map[MoolPath, Set[MoolPath]] = {
+    val dependencyToTestBld =
+      for {
+        (testBldPath, bld) <- blds.toVector //allow duplicate keys
+        if bld.rule_type.contains("test")
+        dependencies = bldsToBlds(testBldPath)
+        dependency <- dependencies
+      } yield dependency -> testBldPath
+
+    for {
+      (dependency, dependencyAndTestBldPaths) <- dependencyToTestBld.groupBy(_._1)
+    } yield dependency -> dependencyAndTestBldPaths.map(_._2).toSet
+  }
+
+  /**
     * Given a path to a bld, get all the paths to blds that it depends on. Transitive.
     */
   val bldToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
