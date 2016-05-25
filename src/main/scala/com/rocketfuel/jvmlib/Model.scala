@@ -2,30 +2,14 @@ package com.rocketfuel.jvmlib
 
 import com.rocketfuel.mool
 import com.rocketfuel.mool.RelCfg
-import java.nio.file.{Files, Path}
+import _root_.java.nio.file.{Files, Path}
 
 case class Model(
-  identifier: Option[Model.Identifier],
-  repository: Option[String],
-  scalaVersion: Option[String],
-  configurations: Map[String, Model.Configuration]
-) {
-  def pathsToCopy(originRoot: Path, destinationRoot: Path): Map[Path, Path] = {
-    val destinationSrc = destinationRoot.resolve("src")
-    for {
-      (configName, config) <- configurations
-      configDestination = destinationSrc.resolve(configName)
-      file <- config.files
-    } yield {
-      val relative = originRoot.relativize(file)
-      //Remove the leading "java"
-      val relativeWithoutJava = relative.subpath(1, relative.getNameCount - 2)
-      val destinationFile = configDestination.resolve(relativeWithoutJava)
-      Files.createDirectories(destinationFile)
-      (file, destinationFile)
-    }
-  }
-}
+  identifier: Option[Model.Identifier] = None,
+  repository: Option[String] = None,
+  scalaVersion: Option[String] = None,
+  configurations: Map[String, Model.Configuration] = Map.empty
+)
 
 object Model {
 
@@ -150,7 +134,7 @@ object Model {
       targetBldParts = withDeps.target.split('.').toVector
       if targetBldParts.startsWith(Vector("mool", "java"))
     } yield {
-
+      //Drop the leading "mool" and get the bld.
       val targetBldPath = targetBldParts.drop(1)
       val bld = moolModel.blds(targetBldPath)
 

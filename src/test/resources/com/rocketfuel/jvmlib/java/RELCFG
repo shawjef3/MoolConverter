@@ -1,0 +1,10 @@
+"0": {
+    "group_id": "test_group",
+    "artifact_id": "test_artifact",
+    "base_version": "0.0",
+
+    "jar-with-dependencies": {
+        "target": "mool.java.0",
+        "artifact_path": "java/0.jar"
+    }
+}

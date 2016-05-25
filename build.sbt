@@ -14,5 +14,6 @@ libraryDependencies ++= Seq(
   "org.slf4s" %% "slf4s-api" % "1.7.13",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.5",
   //testing
-  "org.scalatest" %% "scalatest" % "2.2.6"
+  "org.scalatest" %% "scalatest" % "2.2.6" % "test",
+  "com.google.jimfs" % "jimfs" % "1.1" % "test"
 )
