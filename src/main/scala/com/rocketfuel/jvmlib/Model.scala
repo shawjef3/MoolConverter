@@ -2,7 +2,7 @@ package com.rocketfuel.jvmlib
 
 import com.rocketfuel.mool
 import com.rocketfuel.mool.RelCfg
-import _root_.java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path}
 
 case class Model(
   identifier: Option[Model.Identifier] = None,
@@ -72,7 +72,7 @@ object Model {
       )
 
     val testBldPaths =
-      moolModel.testBlds.getOrElse(path, Set.empty)
+      moolModel.bldToTestBlds.getOrElse(path, Set.empty)
 
     val testDependencies =
       for {
@@ -141,34 +141,51 @@ object Model {
       val dependencies =
         dependenciesOfBld(moolModel)(targetBldPath)
 
+      val dependencySourcePaths =
+        dependencies.toVector.flatMap {
+          case Dependency.Local(path) =>
+            val bld = moolModel.blds(path)
+            bld.srcPaths(moolModel, path)
+          case _ =>
+            Vector.empty
+        }
+
       val sourcePaths =
-        bld.srcPaths(moolModel, targetBldPath)
+        bld.srcPaths(moolModel, targetBldPath) ++
+          dependencySourcePaths
 
       val configuration =
         Configuration(
-          dependencies = dependencies,
+          dependencies = dependencies.filter(_.isInstanceOf[Dependency.Remote]),
           files = sourcePaths.toSet
         )
 
+      // Get paths to the test BLDs that depend on the current BLD
+      // and its dependencies.
       val testBldPaths =
-        moolModel.testBlds.getOrElse(targetBldPath, Set.empty)
+        for {
+          dependency <- moolModel.bldsToBldsTransitive(targetBldPath) + targetBldPath
+          testDependency <- moolModel.bldToTestBlds(dependency)
+        } yield testDependency
 
-      val testDependencies =
+      //Get all the remote dependencies for all the test BLDs.
+      val testRemoteDependencies =
         for {
           testBldPath <- testBldPaths
           dependency <- dependenciesOfBld(moolModel)(testBldPath)
+          if dependency.isInstanceOf[Dependency.Remote]
         } yield dependency
 
       val testSourcePaths =
         for {
           testBldPath <- testBldPaths
-          testBld = moolModel.blds(testBldPath)
-          sourcePath <- testBld.srcPaths(moolModel, testBldPath)
-        } yield sourcePath
+          bld = moolModel.blds(testBldPath)
+          src <- bld.srcPaths(moolModel, testBldPath)
+        } yield src
 
       val testConfiguration =
         Configuration(
-          dependencies = testDependencies,
+          dependencies = testRemoteDependencies,
           files = testSourcePaths
         )
 
@@ -211,16 +228,26 @@ object Model {
 
   def dependenciesOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[Dependency] = {
     for {
-      depPath <- moolModel.bldToBldsTransitive(path)
+      depPath <- moolModel.bldsToBldsTransitive(path)
     } yield {
       val depBld = moolModel.blds(depPath)
       Dependency.of(depPath, depBld)
     }
   }
 
+  def testDependenciesOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[Dependency] = {
+    for {
+      depPath <- moolModel.bldsToBldsTransitive(path)
+      depBld = moolModel.blds(depPath)
+      if depBld.rule_type.contains("test")
+    } yield {
+      Dependency.of(depPath, depBld)
+    }
+  }
+
   def testsOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[Dependency] = {
     for {
-      testPath <- moolModel.testBlds(path)
+      testPath <- moolModel.bldToTestBlds(path)
     } yield {
       val testBld = moolModel.blds(testPath)
       Dependency.of(testPath, testBld)

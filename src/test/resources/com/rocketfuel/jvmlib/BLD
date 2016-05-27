@@ -1,0 +1,22 @@
+"0": {
+    "rule_type": "java_lib",
+    "srcs": ["00.java", "01.java"],
+    "deps": [".1"]
+},
+
+"0Test": {
+    "rule_type": "java_test",
+    "deps": [".0"],
+    "srcs": ["00Test.java", "01Test.java"]
+},
+
+"1": {
+    "rule_type": "java_lib",
+    "srcs": ["10.java", "11.java"]
+},
+
+"1Test": {
+    "rule_type": "java_test",
+    "deps": [".1"],
+    "srcs": ["10Test.java", "11Test.java"]
+}

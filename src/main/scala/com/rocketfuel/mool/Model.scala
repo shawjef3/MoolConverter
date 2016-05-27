@@ -29,7 +29,7 @@ case class Model(
     * This is used to pull test classes into the same project as a bld that is targeted
     * by a relcfg, because relcfgs never reference a testing bld.
     */
-  val testBlds: Map[MoolPath, Set[MoolPath]] = {
+  val bldToTestBlds: Map[MoolPath, Set[MoolPath]] = {
     val dependencyToTestBld =
       for {
         (testBldPath, bld) <- blds.toVector //allow duplicate keys
@@ -46,7 +46,7 @@ case class Model(
   /**
     * Given a path to a bld, get all the paths to blds that it depends on. Transitive.
     */
-  val bldToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
+  val bldsToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
     def aux(accumulator: Set[MoolPath], bldStack : Vector[MoolPath]): Set[MoolPath] = {
       bldStack.headOption match {
         case None =>
@@ -108,7 +108,7 @@ case class Model(
       val relCfg = relCfgs(relCfgPath)
       for {
         bld <- relCfg.`jar-with-dependencies`.toSet[RelCfg.Artifact]
-        transitiveDependency <- bldToBldsTransitive(bld.targetPath) + bld.targetPath
+        transitiveDependency <- bldsToBldsTransitive(bld.targetPath) + bld.targetPath
       } yield transitiveDependency
     }
   }

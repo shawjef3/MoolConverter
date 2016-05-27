@@ -1,7 +1,7 @@
 package com.rocketfuel.jvmlib
 
 import com.rocketfuel.mool
-import _root_.java.nio.file.Path
+import java.nio.file.Path
 
 case class Models(
   models: Map[mool.MoolPath, Model],
@@ -15,7 +15,7 @@ case class Models(
       relCfg = moolModel.relCfgs(relCfgPath)
       bldPath <- relCfg.`jar-with-dependencies`.toIterable.map(_.targetPath)
       bld = moolModel.blds(bldPath)
-      srcPath = destinationRoot.resolve(bldPath.last).resolve("src")
+      srcPath = destinationRoot.resolve(relCfgPath.last).resolve("src")
       (configurationName, configuration) <- model.configurations
       file <- configuration.files
     } yield {

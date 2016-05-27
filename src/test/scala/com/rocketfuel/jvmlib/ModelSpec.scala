@@ -2,9 +2,10 @@ package com.rocketfuel.jvmlib
 
 import com.google.common.jimfs.{Configuration, Jimfs}
 import com.rocketfuel.mool
-import _root_.java.nio.file._
+import java.nio.file._
 import org.apache.commons.io.IOUtils
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
+import sext._
 
 class ModelSpec
   extends FunSuite
@@ -16,17 +17,17 @@ class ModelSpec
 
   test("copies") {
     val moolModel = mool.Model.ofRepository(root)
-    val models = Models.ofMoolRepository(root)
+    val actualModels = Models.ofMoolRepository(root)
 
     val expectedModels =
       Models(
         models =
           Map(
-            Vector("java", "0") -> Model(
+            Vector("java", "0RELCFG") -> Model(
               identifier = Some(Model.Identifier("test_group", "test_artifact", "0.0")),
               configurations = Map(
-                "main" -> Model.Configuration(dependencies = Set.empty, files = Set(root.resolve("java/0.java"))),
-                "test" -> Model.Configuration(dependencies = Set(Model.Dependency.Local(Vector("java", "0"))), files = Set(root.resolve("java/0Test.java")))
+                "main" -> Model.Configuration(dependencies = Set(), files = Set(root.resolve("java/00.java"), root.resolve("java/01.java"), root.resolve("java/10.java"), root.resolve("java/11.java"))),
+                "test" -> Model.Configuration(dependencies = Set(), files = Set(root.resolve("java/00Test.java"), root.resolve("java/01Test.java"), root.resolve("java/10Test.java"), root.resolve("java/11Test.java")))
               )
             )
           ),
@@ -34,20 +35,33 @@ class ModelSpec
         moolRoot = root
       )
 
-    assertResult(expectedModels)(models)
+    assertResult(expectedModels.models(Vector("java", "0RELCFG")).configurations("main"), "main configurations differ")(actualModels.models(Vector("java", "0RELCFG")).configurations("main"))
+    assertResult(expectedModels.models(Vector("java", "0RELCFG")).configurations("test"), "test configurations differ")(actualModels.models(Vector("java", "0RELCFG")).configurations("test"))
+    assertResult(expectedModels.moolModel, "mool models differ")(actualModels.moolModel)
+    assertResult(expectedModels.moolRoot, "mool roots differ")(actualModels.moolRoot)
+
+    assertResult(expectedModels)(actualModels)
 
     val copiesRoot = root.resolve("copies")
 
     val expectedCopies =
       Map(
-        root.resolve("java/0.java") -> copiesRoot.resolve("0/src/main/java/0.java"),
-        root.resolve("java/0Test.java") -> copiesRoot.resolve("0/src/test/java/0Test.java")
+        root.resolve("java/00.java") -> copiesRoot.resolve("0RELCFG/src/main/java/00.java"),
+        root.resolve("java/00Test.java") -> copiesRoot.resolve("0RELCFG/src/test/java/00Test.java"),
+        root.resolve("java/01.java") -> copiesRoot.resolve("0RELCFG/src/main/java/01.java"),
+        root.resolve("java/01Test.java") -> copiesRoot.resolve("0RELCFG/src/test/java/01Test.java"),
+        root.resolve("java/10.java") -> copiesRoot.resolve("0RELCFG/src/main/java/10.java"),
+        root.resolve("java/10Test.java") -> copiesRoot.resolve("0RELCFG/src/test/java/10Test.java"),
+        root.resolve("java/11.java") -> copiesRoot.resolve("0RELCFG/src/main/java/11.java"),
+        root.resolve("java/11Test.java") -> copiesRoot.resolve("0RELCFG/src/test/java/11Test.java")
       )
 
-    val copies =
-      models.copies(copiesRoot)
+    val actualCopies =
+      actualModels.copies(copiesRoot)
 
-    assertResult(expectedCopies)(copies)
+    for ((expectedCopy, actualCopy) <- expectedCopies.zip(actualCopies)) {
+      assertResult(expectedCopy)(actualCopy)
+    }
   }
 
   override protected def beforeEach(): Unit = {
@@ -55,9 +69,9 @@ class ModelSpec
     root = fs.getPath("/")
     Files.createDirectories(root.resolve("java"))
 
-    for (file <- Vector("java/RELCFG", "java/BLD")) {
+    for (file <- Vector("RELCFG", "BLD")) {
       val in = getClass.getResourceAsStream(file)
-      val out = Files.newOutputStream(root.resolve(file))
+      val out = Files.newOutputStream(root.resolve("java").resolve(file))
       IOUtils.copy(in, out)
       out.close()
       in.close()
@@ -67,4 +81,5 @@ class ModelSpec
   override protected def afterEach(): Unit = {
     fs.close()
   }
+
 }

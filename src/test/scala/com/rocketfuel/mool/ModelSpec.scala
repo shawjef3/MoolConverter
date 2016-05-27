@@ -62,7 +62,7 @@ class ModelSpec extends FunSuite {
         bld23Path -> Set(bld45Path),
         bld45Path -> Set()
       )
-    assertResult(expected)(model.bldToBldsTransitive)
+    assertResult(expected)(model.bldsToBldsTransitive)
   }
 
   test("relCfgsToBldsTransitive") {
