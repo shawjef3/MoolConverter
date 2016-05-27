@@ -165,7 +165,7 @@ object Model {
       val testBldPaths =
         for {
           dependency <- moolModel.bldsToBldsTransitive(targetBldPath) + targetBldPath
-          testDependency <- moolModel.bldToTestBlds(dependency)
+          testDependency <- moolModel.bldToTestBlds.getOrElse(dependency, Set.empty)
         } yield testDependency
 
       //Get all the remote dependencies for all the test BLDs.

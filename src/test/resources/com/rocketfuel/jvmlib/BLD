@@ -21,6 +21,12 @@
     "srcs": ["10Test.java", "11Test.java"]
 },
 
+"2": {
+    "rule_type": "java_lib",
+    "srcs": ["20.java"],
+    "deps": [".0"]
+},
+
 "CommonsCollections": {
     "rule_type": "java_lib",
     "maven_specs": {

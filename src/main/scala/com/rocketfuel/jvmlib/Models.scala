@@ -10,15 +10,16 @@ case class Models(
 ) {
 
   def copies(destinationRoot: Path): Map[Path, Path] = {
-    val asIterable = for {
+    for {
       (relCfgPath, model) <- models
       relCfg = moolModel.relCfgs(relCfgPath)
-      bldPath <- relCfg.`jar-with-dependencies`.toIterable.map(_.targetPath)
+      bldPath <- relCfg.`jar-with-dependencies`.toTraversable.map(_.targetPath)
       bld = moolModel.blds(bldPath)
       srcPath = destinationRoot.resolve(relCfgPath.last).resolve("src")
       (configurationName, configuration) <- model.configurations
       file <- configuration.files
     } yield {
+
       val relative = moolRoot.relativize(file)
       val relativeWithoutJava = relative.subpath(1, relative.getNameCount)
 
@@ -41,8 +42,6 @@ case class Models(
 
       (file, destinationFile)
     }
-
-    asIterable.toMap
   }
 }
 
