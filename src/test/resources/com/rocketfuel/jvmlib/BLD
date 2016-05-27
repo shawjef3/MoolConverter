@@ -17,6 +17,16 @@
 
 "1Test": {
     "rule_type": "java_test",
-    "deps": [".1"],
+    "deps": [".1", ".CommonsCollections"],
     "srcs": ["10Test.java", "11Test.java"]
+},
+
+"CommonsCollections": {
+    "rule_type": "java_lib",
+    "maven_specs": {
+        "artifact_id": "commons-collections",
+        "group_id": "commons-collections",
+        "repo_url": "http://nexus.rfiserve.net/content/groups/public",
+        "version": "3.2.1"
+    }
 }

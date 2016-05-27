@@ -27,7 +27,7 @@ class ModelSpec
               identifier = Some(Model.Identifier("test_group", "test_artifact", "0.0")),
               configurations = Map(
                 "main" -> Model.Configuration(dependencies = Set(), files = Set(root.resolve("java/00.java"), root.resolve("java/01.java"), root.resolve("java/10.java"), root.resolve("java/11.java"))),
-                "test" -> Model.Configuration(dependencies = Set(), files = Set(root.resolve("java/00Test.java"), root.resolve("java/01Test.java"), root.resolve("java/10Test.java"), root.resolve("java/11Test.java")))
+                "test" -> Model.Configuration(dependencies = Set(Model.Dependency.Remote("commons-collections", "commons-collections", "3.2.1")), files = Set(root.resolve("java/00Test.java"), root.resolve("java/01Test.java"), root.resolve("java/10Test.java"), root.resolve("java/11Test.java")))
               )
             )
           ),
