@@ -23,27 +23,6 @@ case class Model(
   }
 
   /**
-    * Given a path to a bld, get all the paths to testing blds that depend on it.
-    * Intransitive.
-    *
-    * This is used to pull test classes into the same project as a bld that is targeted
-    * by a relcfg, because relcfgs never reference a testing bld.
-    */
-  val bldToTestBlds: Map[MoolPath, Set[MoolPath]] = {
-    val dependencyToTestBld =
-      for {
-        (testBldPath, bld) <- blds.toVector //allow duplicate keys
-        if bld.rule_type.contains("test")
-        dependencies = bldsToBlds(testBldPath)
-        dependency <- dependencies
-      } yield dependency -> testBldPath
-
-    for {
-      (dependency, dependencyAndTestBldPaths) <- dependencyToTestBld.groupBy(_._1)
-    } yield dependency -> dependencyAndTestBldPaths.map(_._2).toSet
-  }
-
-  /**
     * Given a path to a bld, get all the paths to blds that it depends on. Transitive.
     */
   val bldsToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
@@ -66,6 +45,43 @@ case class Model(
     for {
       (bldPath, _) <- blds
     } yield bldPath -> aux(Set.empty, Vector(bldPath))
+  }
+
+  /**
+    * Given a path to a bld, get all the paths to testing blds that depend on it.
+    * Intransitive.
+    *
+    * This is used to pull test classes into the same project as a bld that is targeted
+    * by a relcfg, because relcfgs never reference a testing bld.
+    *
+    * Mool is odd in that the testing BLDs depend on the BLD being tested, rather than
+    * the test files being part of the same BLD.
+    */
+  val bldToTestBlds: Map[MoolPath, Set[MoolPath]] = {
+    val dependencyToTestBld =
+      for {
+        (testBldPath, bld) <- blds.toVector //allow duplicate keys
+        if bld.rule_type.contains("test")
+        dependencies = bldsToBlds(testBldPath)
+        dependency <- dependencies
+      } yield dependency -> testBldPath
+
+    for {
+      (dependency, dependencyAndTestBldPaths) <- dependencyToTestBld.groupBy(_._1)
+    } yield dependency -> dependencyAndTestBldPaths.map(_._2).toSet
+  }
+
+  val bldToTestBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
+    for {
+      (bld, testBlds) <- bldToTestBlds
+    } yield {
+      val testBldsDependencies =
+        for {
+          testBld <- testBlds
+          testBldDependency <- bldsToBldsTransitive(testBld) + testBld
+        } yield testBldDependency
+      bld -> testBldsDependencies
+    }
   }
 
   /**
@@ -134,17 +150,23 @@ case class Model(
 
 object Model {
 
+  val javaRuleTypes =
+    Set("file_coll", "java_lib", "java_proto_lib", "java_test", "release_package", "scala_lib", "scala_test")
+
   def ofRepository(repo: Path): Model = {
     val bldFiles = findFiles(repo, "BLD")
     val relCfgFiles = findFiles(repo, "RELCFG")
     val versionFiles = findFiles(repo, "RELCFG.versions")
 
     val blds =
-      for (bldFile <- bldFiles) yield {
+      for {
+        bldFile <- bldFiles
+      } yield {
         val blds = Bld.of(repo.resolve(bldFile))
         val bldPathParts = bldFile.split("/").dropRight(1).toVector
         for {
           (bldName, bld) <- blds
+          if javaRuleTypes.contains(bld.rule_type)
         } yield (bldPathParts :+ bldName) -> bld
       }
 
@@ -154,6 +176,8 @@ object Model {
         val relCfgPathParts = relCfgFile.split("/").dropRight(1).toVector
         for {
           (relCfgName, relCfg) <- relCfgs
+          //filter out non-java RelCfgs.
+          if relCfg.`jar-with-dependencies`.nonEmpty
         } yield (relCfgPathParts :+ relCfgName) -> relCfg
       }
 

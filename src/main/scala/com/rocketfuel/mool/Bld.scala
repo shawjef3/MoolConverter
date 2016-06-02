@@ -3,6 +3,7 @@ package com.rocketfuel.mool
 import argonaut._
 import java.io.InputStream
 import java.nio.file.{Files, Path}
+import scalaz.{-\/, \/-}
 
 /**
   *

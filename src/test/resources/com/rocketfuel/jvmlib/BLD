@@ -24,7 +24,7 @@
 "2": {
     "rule_type": "java_lib",
     "srcs": ["20.java"],
-    "deps": [".0"]
+    "deps": [".1"]
 },
 
 "CommonsCollections": {

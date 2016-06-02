@@ -46,7 +46,7 @@ object RelCfg {
     target: String,
     artifact_path: String
   ) {
-    val targetPath =
+    val targetPath: MoolPath =
       //we're lucky that targets are always absolute paths, so we can use Bld.absolutePath.
       Bld.absolutePath(target)
   }

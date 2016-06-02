@@ -5,6 +5,7 @@ import com.rocketfuel.mool
 import java.nio.file._
 import org.apache.commons.io.IOUtils
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
+import scalaz.Tree
 import sext._
 
 class ModelSpec
@@ -34,7 +35,7 @@ class ModelSpec
             Vector("java", "RELCFG1") -> Model(
               identifier = Some(Model.Identifier("test_group", "test_artifact0", "0.0")),
               configurations = Map(
-                "main" -> Model.Configuration(dependencies = Set(Model.Dependency.Local(Vector("java", "RELCFG0"))), files = Set(root.resolve("java/20.java")))
+                "main" -> Model.Configuration(dependencies = Set(Model.Dependency.RelCfg(Vector("java", "RELCFG0"))), files = Set(root.resolve("java/20.java")))
               )
             )
           ),
@@ -46,7 +47,7 @@ class ModelSpec
     assertResult(expectedModels.models(Vector("java", "RELCFG0")).configurations("test"), "test configurations differ")(actualModels.models(Vector("java", "RELCFG0")).configurations("test"))
 
     //Test some properties of RELCFG dependencies.
-    assertResult(Set(Model.Dependency.Local(Vector("java", "RELCFG0"))), "Model dependencies don't reflect their RELCFG's BLD dependencies.")(actualModels.models(Vector("java", "RELCFG1")).configurations("main").dependencies)
+    assertResult(Set(Model.Dependency.RelCfg(Vector("java", "RELCFG0"))), "Model dependencies don't reflect their RELCFG's BLD dependencies.")(actualModels.models(Vector("java", "RELCFG1")).configurations("main").dependencies)
     assertResult(Set(root.resolve("java/20.java")), "Model source files aren't blocked by another RELCFG.")(actualModels.models(Vector("java", "RELCFG1")).configurations("main").files)
 
     assertResult(expectedModels.models(Vector("java", "RELCFG1")).configurations("main"), "main configurations differ")(actualModels.models(Vector("java", "RELCFG1")).configurations("main"))
@@ -76,6 +77,26 @@ class ModelSpec
     for ((expectedCopy, actualCopy) <- expectedCopies.zip(actualCopies)) {
       assertResult(expectedCopy)(actualCopy)
     }
+  }
+
+  test("DependencyTree") {
+    import com.rocketfuel.mool.{Dependency, DependencyTree}
+    val moolModel = mool.Model.ofRepository(root)
+
+    val actual = DependencyTree.relCfgRoots(moolModel)
+
+    val expected = Stream[scalaz.Tree[Dependency]](
+      Tree.node(Dependency.RelCfg(Vector("java", "RELCFG0")), Stream(Tree.node(Dependency.Bld(Vector("java", "0")), Stream(Tree.leaf(Dependency.Bld(Vector("java", "1"))))))),
+      Tree.node(Dependency.RelCfg(Vector("java", "RELCFG1")), Stream(Tree.node(Dependency.Bld(Vector("java", "2")), Stream(Tree.leaf(Dependency.Bld(Vector("java", "1")))))))
+    )
+
+    val expectedString =
+      expected.map(_.drawTree).toVector.mkString("\n")
+
+    val actualString =
+      actual.map(_.map(_._2).drawTree).toVector.mkString("\n")
+
+    assertResult(expectedString)(actualString)
   }
 
   override protected def beforeEach(): Unit = {

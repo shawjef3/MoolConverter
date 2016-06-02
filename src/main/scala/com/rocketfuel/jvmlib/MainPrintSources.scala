@@ -15,10 +15,10 @@ object MainPrintSources extends App {
     } yield {
       val dependencyFiles =
         configuration.dependencies.flatMap {
-          case Model.Dependency.Local(depPath) =>
+          case Model.Dependency.Bld(depPath) =>
             val dep = moolModel.blds(depPath)
             dep.srcPaths(moolModel, depPath)
-          case x: Model.Dependency.Remote =>
+          case _ =>
             Vector[Path]()
         }
 
