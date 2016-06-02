@@ -1,4 +1,4 @@
-package com.rocketfuel.mool
+package com.rocketfuel.build.mool
 
 import argonaut._
 import java.io.InputStream

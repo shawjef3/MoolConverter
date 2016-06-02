@@ -1,4 +1,4 @@
-package com.rocketfuel.mool
+package com.rocketfuel.build.mool
 
 import scalaz._
 
@@ -32,7 +32,7 @@ object Dependency {
       }
     }
 
-  def ofBld(path: Vector[String], bld: com.rocketfuel.mool.Bld): Dependency = {
+  def ofBld(path: Vector[String], bld: com.rocketfuel.build.mool.Bld): Dependency = {
     bld.maven_specs match {
       case None =>
         Bld(path)

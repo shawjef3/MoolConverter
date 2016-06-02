@@ -1,7 +1,7 @@
-package com.rocketfuel.jvmlib
+package com.rocketfuel.build.jvmlib
 
 import com.google.common.jimfs.{Configuration, Jimfs}
-import com.rocketfuel.mool
+import com.rocketfuel.build.mool
 import java.nio.file._
 import org.apache.commons.io.IOUtils
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
@@ -80,7 +80,7 @@ class ModelSpec
   }
 
   test("DependencyTree") {
-    import com.rocketfuel.mool.{Dependency, DependencyTree}
+    import com.rocketfuel.build.mool.{Dependency, DependencyTree}
     val moolModel = mool.Model.ofRepository(root)
 
     val actual = DependencyTree.relCfgRoots(moolModel)

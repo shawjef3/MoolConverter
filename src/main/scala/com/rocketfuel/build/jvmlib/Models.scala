@@ -1,6 +1,6 @@
-package com.rocketfuel.jvmlib
+package com.rocketfuel.build.jvmlib
 
-import com.rocketfuel.mool
+import com.rocketfuel.build.mool
 import java.nio.file.Path
 
 case class Models(

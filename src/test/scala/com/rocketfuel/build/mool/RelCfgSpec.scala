@@ -1,4 +1,4 @@
-package com.rocketfuel.mool
+package com.rocketfuel.build.mool
 
 import org.scalatest.FunSuite
 import scalaz.Scalaz._

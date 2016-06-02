@@ -1,4 +1,4 @@
-package com.rocketfuel
+package com.rocketfuel.build
 
 package object mool {
 

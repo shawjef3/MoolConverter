@@ -1,7 +1,7 @@
-package com.rocketfuel.jvmlib
+package com.rocketfuel.build.jvmlib
 
-import com.rocketfuel.mool
-import com.rocketfuel.mool.RelCfg
+import com.rocketfuel.build.mool
+import com.rocketfuel.build.mool.RelCfg
 import java.nio.file.{Files, Path}
 
 case class Model(

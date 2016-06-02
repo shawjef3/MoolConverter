@@ -1,4 +1,4 @@
-package com.rocketfuel.jvmlib
+package com.rocketfuel.build.jvmlib
 
 import java.nio.file._
 
