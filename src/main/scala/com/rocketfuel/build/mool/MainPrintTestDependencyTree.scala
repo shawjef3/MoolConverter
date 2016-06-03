@@ -1,12 +1,6 @@
 package com.rocketfuel.build.mool
 
-object MainPrintTestDependencyTree extends App {
-
-  import java.nio.file.Paths
-
-  val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
-
-  val model = Model.ofRepository(moolRoot)
+object MainPrintTestDependencyTree extends ModelApp {
 
   val depTrees = DependencyTree.ofTestBlds(model)
 

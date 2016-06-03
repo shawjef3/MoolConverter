@@ -12,7 +12,7 @@ case class Model(
 ) {
 
   /**
-    * Given a path to a bld, get all the paths to blds that it depends on. Intransitive.
+    * Given a path to a Bld, get all the paths to Blds that it depends on. Intransitive.
     */
   val bldsToBlds: Map[MoolPath, Set[MoolPath]] = {
     for {
@@ -23,7 +23,7 @@ case class Model(
   }
 
   /**
-    * Given a path to a bld, get all the paths to blds that it depends on. Transitive.
+    * Given a path to a Bld, get all the paths to Blds that it depends on. Transitive.
     */
   val bldsToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
     def aux(accumulator: Set[MoolPath], bldStack : Vector[MoolPath]): Set[MoolPath] = {
@@ -47,21 +47,24 @@ case class Model(
     } yield bldPath -> aux(Set.empty, Vector(bldPath))
   }
 
+  val testBlds = {
+    blds.filter(_._2.rule_type.contains("test"))
+  }
+
   /**
-    * Given a path to a bld, get all the paths to testing blds that depend on it.
+    * Given a path to a Bld, get all the paths to testing Blds that depend on it.
     * Intransitive.
     *
-    * This is used to pull test classes into the same project as a bld that is targeted
-    * by a relcfg, because relcfgs never reference a testing bld.
+    * This is used to pull test classes into the same project as a Bld that is targeted
+    * by a RelCfg, because RelCfgs never reference a testing Bld.
     *
-    * Mool is odd in that the testing BLDs depend on the BLD being tested, rather than
-    * the test files being part of the same BLD.
+    * Mool is odd in that the testing Blds depend on the Bld being tested, rather than
+    * the test files being part of the same Bld.
     */
   val bldToTestBlds: Map[MoolPath, Set[MoolPath]] = {
     val dependencyToTestBld =
       for {
-        (testBldPath, bld) <- blds.toVector //allow duplicate keys
-        if bld.rule_type.contains("test")
+        (testBldPath, bld) <- testBlds.toTraversable //allow duplicate keys
         dependencies = bldsToBlds(testBldPath)
         dependency <- dependencies
       } yield dependency -> testBldPath
@@ -85,7 +88,7 @@ case class Model(
   }
 
   /**
-    * Given a path to a bld, get all the paths to relcfgs that directly reference the bld.
+    * Given a path to a Bld, get all the paths to RelCfgs that directly reference the Bld.
     */
   val bldsToRelCfgs: Map[MoolPath, Set[MoolPath]] = {
     for {
@@ -101,7 +104,7 @@ case class Model(
   }
 
   /**
-    * Given a path to a relcfg, get the path to bld file the relcfg references.
+    * Given a path to a RelCfg, get the path to Bld file the RelCfg references.
     */
   val relCfgsToBld: Map[MoolPath, Option[MoolPath]] = {
     for {
@@ -112,7 +115,7 @@ case class Model(
   }
 
   /**
-    * Given a path to a RelCfg, get all the paths to blds that it depends on. Transitive.
+    * Given a path to a RelCfg, get all the paths to Blds that it depends on. Transitive.
     *
     * The values are streams, because they will be infinite when there is a
     * circular dependency.
@@ -130,21 +133,84 @@ case class Model(
   }
 
   /**
-    * Given a path to a bld, get all the relcfgs that depend on it, following
-    * transitive bld dependencies.
+    * Given a path to a Bld, get all the RelCfgs that depend on it, following
+    * transitive Bld dependencies.
     */
   val bldsToRelCfgsTransitive: Map[MoolPath, Set[MoolPath]] = {
+    //For Blds that have no RelCfg
+    val defaults =
+      blds.map(_.copy(_2 = Set.empty[MoolPath]))
+
     val one =
       for {
-        (relCfg, blds) <- relCfgsToBldsTransitive
+        (relCfg, blds) <- relCfgsToBldsTransitive.toTraversable //allow duplicates
         bld <- blds
       } yield (bld, relCfg)
+
     val grouped = one.groupBy(_._1)
-    grouped.map {
+
+    val groupedWithoutKey = grouped.map {
       case (key, value) =>
         (key, value.map(_._2).toSet)
     }
+
+    defaults ++ groupedWithoutKey
   }
+
+  /**
+    * A map of Blds that are directly referenced by at least two RelCfgs.
+    */
+  val bldDirectConflicts = {
+    bldsToRelCfgs.filter(_._2.size > 1).keySet
+  }
+
+  /**
+    * A map of Blds that are indirectly referenced by at least two RelCfgs, but
+    * directly referenced by no RelCfgs, to the RelCfgs that indirectly reference
+    * them.
+    *
+    * These Blds and their dependencies will need to be put into
+    * their own libraries, to prevent duplication.
+    *
+    * Blds for maven dependencies are ignored.
+    */
+  val bldIndirectConflicts = {
+    val indirectBlds =
+      relCfgsToBldsTransitive.map {
+        case (relCfgPath, transitiveBlds) =>
+          (relCfgPath, transitiveBlds -- relCfgsToBld.get(relCfgPath).flatten.toSet)
+      }
+
+    val indirectBldToRelCfg = for {
+      (relCfgPath, bldPaths) <- indirectBlds.toTraversable
+      bldPath <- bldPaths
+    } yield (bldPath, relCfgPath)
+
+    for {
+      (bldPath, bldPathAndRelCfgPaths) <- indirectBldToRelCfg.groupBy(_._1)
+      if bldPathAndRelCfgPaths.size > 1 && blds(bldPath).maven_specs.isEmpty
+    } yield (bldPath, bldPathAndRelCfgPaths.map(_._2).toSet)
+  }
+
+  /**
+    * These Blds are not referenced by any RelCfg, transitively or directly.
+    *
+    * This doesn't include test Blds.
+    */
+  val bldOrphans = {
+    (blds.filter(! _._2.rule_type.contains("test")) -- relCfgsToBldsTransitive.flatMap(_._2)).keySet
+  }
+
+  /**
+    * These test Blds are not referenced by any RelCfg, transitively or directly.
+    */
+  val testBldOrphans = {
+    for {
+      (bldPath, bld) <- testBlds
+      //If all the Blds that the test Bld depends on are orphaned, then the test Bld is orphaned too.
+      if bldsToBlds(bldPath).forall(bldOrphans.contains)
+    } yield bldPath
+  } toSet
 
 }
 

@@ -46,29 +46,28 @@ object Dependency {
     *
     * If the Bld is in this RelCfg, give the remote dependency or nothing.
     */
-  def ofBldOrOwner(moolModel: Model, relCfgPath: MoolPath, bldPath: MoolPath): Option[Dependency] = {
-    val bldRelCfgs = moolModel.bldsToRelCfgs(bldPath)
-
-    assert(bldRelCfgs.size == 1)
-
-    val bldRelCfg = bldRelCfgs.head
+  def ofBldOrOwner(moolModel: Model, relCfgPath: MoolPath, bldPath: MoolPath): Set[Dependency] = {
+    val bldRelCfgs = moolModel.bldsToRelCfgs(bldPath) - bldPath
 
     val bld = moolModel.blds(bldPath)
 
-    (bldRelCfg == relCfgPath, bld.maven_specs) match {
-      case (true, Some(mavenSpecs)) =>
-        Some(
-          Dependency.Maven(
-            groupId = mavenSpecs.group_id,
-            artifactId = mavenSpecs.artifact_id,
-            version = mavenSpecs.version
-          )
-        )
-      case (false, _) =>
-        Some(Dependency.RelCfg(bldRelCfg))
-      case _ =>
-        None
-    }
+    for {
+      bldRelCfg<- bldRelCfgs
+      dependency <- (bldRelCfg == relCfgPath, bld.maven_specs) match {
+                      case (true, Some(mavenSpecs)) =>
+                        Set[Dependency](
+                          Dependency.Maven(
+                            groupId = mavenSpecs.group_id,
+                            artifactId = mavenSpecs.artifact_id,
+                            version = mavenSpecs.version
+                          )
+                        )
+                      case (false, _) =>
+                        Set[Dependency](Dependency.RelCfg(bldRelCfg))
+                      case _ =>
+                        Set.empty[Dependency]
+                    }
+    } yield dependency
   }
 
 }

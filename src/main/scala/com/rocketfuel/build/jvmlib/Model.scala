@@ -211,7 +211,8 @@ object Model {
     val relCfgBlds = moolModel.relCfgsToBldsTransitive(relCfgPath)
     val myBlds =
       relCfgBlds.filter { bldPath =>
-        val bldRelCfgs = moolModel.bldsToRelCfgs(bldPath)
+        val bldRelCfgs = moolModel.bldsToRelCfgsTransitive(bldPath)
+        assert(bldRelCfgs.size == 1)
         bldRelCfgs == Set(relCfgPath)
       }
 
@@ -222,9 +223,10 @@ object Model {
     val notMyBldRelCfgs: Set[mool.Dependency] =
       for {
         notMyBld <- notMyBlds
-        relCfgs = moolModel.bldsToRelCfgs(notMyBld)
-        () = assert(relCfgs.size == 1)
-        dependency: mool.Dependency <- mool.Dependency.ofBldOrOwner(moolModel, relCfgs.head, notMyBld).toSet
+        relCfgs = moolModel.bldsToRelCfgsTransitive(notMyBld) - relCfgPath
+        possibleDependencies = mool.Dependency.ofBldOrOwner(moolModel, relCfgs.head, notMyBld)
+        () = assert(possibleDependencies.size <= 1)
+        dependency <- possibleDependencies
       } yield dependency
 
     val remoteDependencies: Set[mool.Dependency] =
