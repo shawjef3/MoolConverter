@@ -44,7 +44,7 @@ object Dependency {
 }
 
 object DependencyTree {
-  def relCfgRoots(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+  def ofRelCfgs(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
     val roots =
       model.relCfgs.keys.toStream.map(Dependency.RelCfg)
 
@@ -79,28 +79,42 @@ object DependencyTree {
     }
   }
 
-  def bldRoots(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+  private def unfoldBlds(model: Model, blds: Map[Vector[String], Bld]): Stream[Tree[(Vector[Dependency], Dependency)]] = {
     val roots =
-      model.blds.keys.toStream.map(bldPath => Dependency.ofBld(bldPath, model.blds(bldPath))).filter(_.isInstanceOf[Dependency.Bld])
+      blds.map(b => Dependency.ofBld(b._1, b._2))
 
     val rootsWithSelves =
       roots.map(root => (Vector[Dependency](root), root))
 
-    Tree.unfoldForest[(Vector[Dependency], Dependency), (Vector[Dependency], Dependency)](rootsWithSelves) {
+    Tree.unfoldForest[(Vector[Dependency], Dependency), (Vector[Dependency], Dependency)](rootsWithSelves.toStream) {
       case (parents, d: Dependency.Bld) =>
         lazy val children =
           for {
             bldPath <- model.bldsToBlds(d.path).toStream
             bld = model.blds(bldPath)
             bldDependency = Dependency.ofBld(bldPath, bld)
-            if ! parents.contains(bldDependency)
+            if !parents.contains(bldDependency)
           } yield {
             (parents :+ bldDependency, bldDependency)
           }
         ((parents, d), () => children)
       case (parents, r: Dependency.Maven) =>
         ((parents, r), () => Stream.empty)
+      case _ =>
+        throw new IllegalArgumentException("BLD dependent on a RelCfg")
     }
+  }
+
+  def ofBlds(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+    val nonTestRoots = model.blds.filter(! _._2.rule_type.contains("test"))
+
+    unfoldBlds(model, nonTestRoots)
+  }
+
+  def ofTestBlds(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+    val testRoots = model.blds.filter(_._2.rule_type.contains("test"))
+
+    unfoldBlds(model, testRoots)
   }
 
   def gorns(tree: Tree[(Vector[Dependency], Dependency)]): Set[Vector[Dependency]] = {

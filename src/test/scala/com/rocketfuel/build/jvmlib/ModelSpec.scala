@@ -83,7 +83,7 @@ class ModelSpec
     import com.rocketfuel.build.mool.{Dependency, DependencyTree}
     val moolModel = mool.Model.ofRepository(root)
 
-    val actual = DependencyTree.relCfgRoots(moolModel)
+    val actual = DependencyTree.ofRelCfgs(moolModel)
 
     val expected = Stream[scalaz.Tree[Dependency]](
       Tree.node(Dependency.RelCfg(Vector("java", "RELCFG0")), Stream(Tree.node(Dependency.Bld(Vector("java", "0")), Stream(Tree.leaf(Dependency.Bld(Vector("java", "1"))))))),

@@ -5,15 +5,6 @@ import java.io.InputStream
 import java.nio.file.{Files, Path}
 import scalaz.{-\/, \/-}
 
-/**
-  *
-  * @param rule_type
-  * @param srcs
-  * @param deps
-  * @param compileDeps
-  * @param scala_version
-  * @param maven_specs is for a dependency to be downloaded.
-  */
 case class Bld(
   rule_type: String,
   srcs: Option[MoolPath] = None,

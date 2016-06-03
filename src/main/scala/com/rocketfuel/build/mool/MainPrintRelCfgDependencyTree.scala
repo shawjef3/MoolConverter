@@ -11,14 +11,10 @@ object MainPrintRelCfgDependencyTree extends App {
 
   val model = Model.ofRepository(moolRoot)
 
-  val depTree = DependencyTree.relCfgRoots(model)
+  val depTree = DependencyTree.ofRelCfgs(model)
 
-  lazy val trees = depTree.map(_.map(_._2)).map(_.drawTree)
+  val trees = depTree.map(_.map(_._2)).map(_.drawTree)
 
-  lazy val gorns = depTree.map(DependencyTree.gorns)
-
-  gorns.foreach(println)
-
-//  trees.foreach(println)
+  trees.foreach(println)
 
 }
