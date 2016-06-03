@@ -4,8 +4,6 @@ import scalaz._
 
 sealed trait Dependency
 
-import scalaz.Show
-
 object Dependency {
 
   case class Bld(path: MoolPath) extends Dependency
@@ -38,6 +36,38 @@ object Dependency {
         Bld(path)
       case Some(mvnSpecs) =>
         Maven(mvnSpecs.group_id, mvnSpecs.artifact_id, mvnSpecs.version)
+    }
+  }
+
+  /**
+    * Creates a dependency for a RelCfg's Bld.
+    *
+    * If the Bld is in another RelCfg, depend on the RelCfg.
+    *
+    * If the Bld is in this RelCfg, give the remote dependency or nothing.
+    */
+  def ofBldOrOwner(moolModel: Model, relCfgPath: MoolPath, bldPath: MoolPath): Option[Dependency] = {
+    val bldRelCfgs = moolModel.bldsToRelCfgs(bldPath)
+
+    assert(bldRelCfgs.size == 1)
+
+    val bldRelCfg = bldRelCfgs.head
+
+    val bld = moolModel.blds(bldPath)
+
+    (bldRelCfg == relCfgPath, bld.maven_specs) match {
+      case (true, Some(mavenSpecs)) =>
+        Some(
+          Dependency.Maven(
+            groupId = mavenSpecs.group_id,
+            artifactId = mavenSpecs.artifact_id,
+            version = mavenSpecs.version
+          )
+        )
+      case (false, _) =>
+        Some(Dependency.RelCfg(bldRelCfg))
+      case _ =>
+        None
     }
   }
 
