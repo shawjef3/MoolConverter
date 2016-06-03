@@ -28,14 +28,14 @@ class ModelSpec
               identifier = Some(Model.Identifier("test_group", "test_artifact0", "0.0")),
               configurations = Map(
                 "main" -> Model.Configuration(dependencies = Set(), files = Set(root.resolve("java/00.java"), root.resolve("java/01.java"), root.resolve("java/10.java"), root.resolve("java/11.java"))),
-                "test" -> Model.Configuration(dependencies = Set(Model.Dependency.Remote("commons-collections", "commons-collections", "3.2.1")), files = Set(root.resolve("java/00Test.java"), root.resolve("java/01Test.java"), root.resolve("java/10Test.java"), root.resolve("java/11Test.java")))
+                "test" -> Model.Configuration(dependencies = Set(mool.Dependency.Maven("commons-collections", "commons-collections", "3.2.1")), files = Set(root.resolve("java/00Test.java"), root.resolve("java/01Test.java"), root.resolve("java/10Test.java"), root.resolve("java/11Test.java")))
               )
             ),
             //This second RELCFG is use to test that source files don't get included in downstream projects.
             Vector("java", "RELCFG1") -> Model(
               identifier = Some(Model.Identifier("test_group", "test_artifact0", "0.0")),
               configurations = Map(
-                "main" -> Model.Configuration(dependencies = Set(Model.Dependency.RelCfg(Vector("java", "RELCFG0"))), files = Set(root.resolve("java/20.java")))
+                "main" -> Model.Configuration(dependencies = Set(mool.Dependency.RelCfg(Vector("java", "RELCFG0"))), files = Set(root.resolve("java/20.java")))
               )
             )
           ),
@@ -47,7 +47,7 @@ class ModelSpec
     assertResult(expectedModels.models(Vector("java", "RELCFG0")).configurations("test"), "test configurations differ")(actualModels.models(Vector("java", "RELCFG0")).configurations("test"))
 
     //Test some properties of RELCFG dependencies.
-    assertResult(Set(Model.Dependency.RelCfg(Vector("java", "RELCFG0"))), "Model dependencies don't reflect their RELCFG's BLD dependencies.")(actualModels.models(Vector("java", "RELCFG1")).configurations("main").dependencies)
+    assertResult(Set(mool.Dependency.RelCfg(Vector("java", "RELCFG0"))), "Model dependencies don't reflect their RELCFG's BLD dependencies.")(actualModels.models(Vector("java", "RELCFG1")).configurations("main").dependencies)
     assertResult(Set(root.resolve("java/20.java")), "Model source files aren't blocked by another RELCFG.")(actualModels.models(Vector("java", "RELCFG1")).configurations("main").files)
 
     assertResult(expectedModels.models(Vector("java", "RELCFG1")).configurations("main"), "main configurations differ")(actualModels.models(Vector("java", "RELCFG1")).configurations("main"))

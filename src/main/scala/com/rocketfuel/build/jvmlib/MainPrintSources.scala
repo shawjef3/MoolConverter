@@ -15,7 +15,7 @@ object MainPrintSources extends App {
     } yield {
       val dependencyFiles =
         configuration.dependencies.flatMap {
-          case Model.Dependency.Bld(depPath) =>
+          case mool.Dependency.Bld(depPath) =>
             val dep = moolModel.blds(depPath)
             dep.srcPaths(moolModel, depPath)
           case _ =>

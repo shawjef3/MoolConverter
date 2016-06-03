@@ -2,7 +2,7 @@ package com.rocketfuel.build.jvmlib
 
 import com.rocketfuel.build.mool
 import com.rocketfuel.build.mool.RelCfg
-import java.nio.file.{Files, Path}
+import java.nio.file.Path
 
 case class Model(
   identifier: Option[Model.Identifier] = None,
@@ -20,27 +20,25 @@ object Model {
   )
 
   case class Configuration(
-    dependencies: Set[Dependency],
+    dependencies: Set[mool.Dependency],
     files: Set[Path]
   )
-
-  sealed trait Dependency
 
   object Dependency {
     /**
       * Creates a dependency of a Bld as a remote dependency
       * or as the Bld itself.
       */
-    def ofBld(bldPath: mool.MoolPath, bld: mool.Bld): Dependency = {
+    def ofBld(bldPath: mool.MoolPath, bld: mool.Bld): mool.Dependency = {
       bld.maven_specs match {
         case Some(mavenSpecs) =>
-          Dependency.Remote(
+          mool.Dependency.Maven(
             groupId = mavenSpecs.group_id,
             artifactId = mavenSpecs.artifact_id,
             version = mavenSpecs.version
           )
         case None =>
-          Dependency.Bld(bldPath)
+          mool.Dependency.Bld(bldPath)
       }
     }
 
@@ -51,7 +49,7 @@ object Model {
       *
       * If the Bld is in this RelCfg, give the remote dependency or nothing.
       */
-    def of(moolModel: mool.Model, relCfgPath: mool.MoolPath, bldPath: mool.MoolPath): Option[Dependency] = {
+    def of(moolModel: mool.Model, relCfgPath: mool.MoolPath, bldPath: mool.MoolPath): Option[mool.Dependency] = {
       val bldRelCfgs = moolModel.bldsToRelCfgs(bldPath)
 
       assert(bldRelCfgs.size == 1)
@@ -63,36 +61,19 @@ object Model {
       (bldRelCfg == relCfgPath, bld.maven_specs) match {
         case (true, Some(mavenSpecs)) =>
           Some(
-            Dependency.Remote(
+            mool.Dependency.Maven(
               groupId = mavenSpecs.group_id,
               artifactId = mavenSpecs.artifact_id,
               version = mavenSpecs.version
             )
           )
         case (false, _) =>
-          Some(Dependency.Bld(bldRelCfg))
+          Some(mool.Dependency.Bld(bldRelCfg))
         case _ =>
           None
       }
     }
 
-    /**
-      *
-      * @param path is the path to the RelCfg to be depended upon.
-      */
-    case class Bld(
-      path: Vector[String]
-    ) extends Dependency
-
-    case class RelCfg(
-      path: Vector[String]
-    ) extends Dependency
-
-    case class Remote(
-      groupId: String,
-      artifactId: String,
-      version: String
-    ) extends Dependency
   }
 
   /**
@@ -187,7 +168,7 @@ object Model {
 
       val dependencySourcePaths =
         dependencies.toVector.flatMap {
-          case Dependency.Bld(path) =>
+          case mool.Dependency.Bld(path) =>
             val bld = moolModel.blds(path)
             bld.srcPaths(moolModel, path)
           case _ =>
@@ -200,7 +181,7 @@ object Model {
 
       val configuration =
         Configuration(
-          dependencies = dependencies.filter(_.isInstanceOf[Dependency.Remote]),
+          dependencies = dependencies.filter(_.isInstanceOf[mool.Dependency.Maven]),
           files = sourcePaths.toSet
         )
 
@@ -217,7 +198,7 @@ object Model {
         for {
           testBldPath <- testBldPaths
           dependency <- dependenciesOfBld(moolModel)(testBldPath)
-          if dependency.isInstanceOf[Dependency.Remote]
+          if dependency.isInstanceOf[mool.Dependency.Maven]
         } yield dependency
 
       val testSourcePaths =
@@ -270,7 +251,7 @@ object Model {
     }
   }
 
-  def dependenciesOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[Dependency] = {
+  def dependenciesOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[mool.Dependency] = {
     for {
       depPath <- moolModel.bldsToBldsTransitive(path)
     } yield {
@@ -279,7 +260,7 @@ object Model {
     }
   }
 
-  def dependenciesOfRelCfg(moolModel: mool.Model)(relCfgPath: mool.MoolPath): Set[Dependency] = {
+  def dependenciesOfRelCfg(moolModel: mool.Model)(relCfgPath: mool.MoolPath): Set[mool.Dependency] = {
     val relCfgBlds = moolModel.relCfgsToBldsTransitive(relCfgPath)
     val myBlds =
       relCfgBlds.filter { bldPath =>
@@ -291,25 +272,25 @@ object Model {
       relCfgBlds -- myBlds
 
     //For Blds that don't belong to this RelCfg, get the RelCfgs they belong to.
-    val notMyBldRelCfgs: Set[Model.Dependency] =
+    val notMyBldRelCfgs: Set[mool.Dependency] =
       for {
         notMyBld <- notMyBlds
         relCfgs = moolModel.bldsToRelCfgs(notMyBld)
         () = assert(relCfgs.size == 1)
-        dependency: Model.Dependency <- Dependency.of(moolModel, relCfgs.head, notMyBld).toSet
+        dependency: mool.Dependency <- Dependency.of(moolModel, relCfgs.head, notMyBld).toSet
       } yield dependency
 
-    val remoteDependencies: Set[Model.Dependency] =
+    val remoteDependencies: Set[mool.Dependency] =
       for {
         myBldPath <- myBlds
         myBld = moolModel.blds(myBldPath)
         mavenSpecs: mool.Bld.MavenSpecs <- myBld.maven_specs.toSet
-      } yield Dependency.Remote(mavenSpecs.group_id, mavenSpecs.artifact_id, mavenSpecs.version)
+      } yield mool.Dependency.Maven(mavenSpecs.group_id, mavenSpecs.artifact_id, mavenSpecs.version)
 
     notMyBldRelCfgs ++ remoteDependencies
   }
 
-  def testDependenciesOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[Dependency] = {
+  def testDependenciesOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[mool.Dependency] = {
     for {
       depPath <- moolModel.bldsToBldsTransitive(path)
       depBld = moolModel.blds(depPath)
@@ -319,7 +300,7 @@ object Model {
     }
   }
 
-  def testsOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[Dependency] = {
+  def testsOfBld(moolModel: mool.Model)(path: mool.MoolPath): Set[mool.Dependency] = {
     for {
       testPath <- moolModel.bldToTestBlds(path)
     } yield {
