@@ -10,6 +10,15 @@ object MainCopyModels extends App {
 
   val models = Models.ofMoolRepository(moolRoot)
 
-  models.copies(destinationRoot).foreach(println)
+  println(destinationRoot)
+
+  for {
+    (src, dest) <- models.copies
+  } {
+    val destPath = destinationRoot.resolve(dest)
+//    Files.createDirectories(destPath.getParent)
+//    Files.copy(src, destPath)
+    println((src, destPath))
+  }
 
 }

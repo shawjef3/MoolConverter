@@ -66,15 +66,6 @@ class ModelSpec extends FunSuite {
       versions = Map.empty
     )
 
-  test("relCfgsToBld") {
-    val expected =
-      Map(
-        relCfg0Path -> Some(bld00Path),
-        relCfg1Path -> Some(bld10Path)
-      )
-    assertResult(expected)(model.relCfgsToBld)
-  }
-
   test("bldsToBlds") {
     val expected =
       Map(
@@ -101,82 +92,11 @@ class ModelSpec extends FunSuite {
     assertResult(expected)(model.bldsToBldsTransitive)
   }
 
-  test("relCfgsToBldsTransitive") {
-    val expected =
-      Map(
-        relCfg0Path -> Set(bld00Path, bld01Path, bld02Path, bldConflictPath),
-        relCfg1Path -> Set(bld10Path, bldConflictPath)
-      )
-    assertResult(expected)(model.relCfgsToBldsTransitive)
-  }
-
-  test("bldsToRelCfgs") {
-    val expected =
-      Map(
-        bld00Path -> Set(relCfg0Path),
-        bld01Path -> Set(),
-        bld02Path -> Set(),
-        bld10Path -> Set(relCfg1Path),
-        bldConflictPath -> Set(),
-        bldOrphanPath -> Set()
-      )
-    assertResult(expected)(model.bldsToRelCfgs)
-  }
-
-  test("bldsToRelCfgsTransitive") {
-    val expected =
-      Map(
-        bld00Path -> Set(relCfg0Path),
-        bld01Path -> Set(relCfg0Path),
-        bld02Path -> Set(relCfg0Path),
-        bld10Path -> Set(relCfg1Path),
-        bldConflictPath -> Set(relCfg0Path, relCfg1Path),
-        bldOrphanPath -> Set()
-      )
-    assertResult(expected)(model.bldsToRelCfgsTransitive)
-  }
-
   test("01.src") {
     val expected =
       Vector(model.root.resolve("java").resolve("0").resolve("0").resolve("0.src"))
     val actual = bld00.srcPaths(model, bld00Path)
     assertResult(expected)(actual)
-  }
-
-  test("circular dependencies") {
-    val circularBlds =
-      blds + (bld02Path -> bld02.copy(deps = Some(Vector(bld00StringPath))))
-
-    val circularModel =
-      model.copy(
-        blds = circularBlds
-      )
-
-    val expected =
-      Map(
-        relCfg0Path -> Set(bld00Path, bld01Path, bld02Path, bldConflictPath),
-        relCfg1Path -> Set(bld10Path, bldConflictPath)
-      )
-
-    val actual =
-      circularModel.relCfgsToBldsTransitive
-
-    assertResult(expected)(actual)
-  }
-
-  test("bldConflicts") {
-    val expectedConflicts =
-      Map(
-        bldConflictPath -> Set(relCfg0Path, relCfg1Path)
-      )
-
-    assertResult(expectedConflicts)(model.bldIndirectConflicts)
-  }
-
-  test("bldOrphans") {
-    val expectedOrphans = Set(bldOrphanPath)
-
-    assertResult(expectedOrphans)(model.bldOrphans)
   }
 
 }

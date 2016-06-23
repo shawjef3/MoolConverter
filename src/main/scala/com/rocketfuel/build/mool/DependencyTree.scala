@@ -8,8 +8,6 @@ object Dependency {
 
   case class Bld(path: MoolPath) extends Dependency
 
-  case class RelCfg(path: MoolPath) extends Dependency
-
   case class Maven(
     groupId: String,
     artifactId: String,
@@ -22,15 +20,13 @@ object Dependency {
         f match {
           case Bld(path) =>
             "Bld(" + path.mkString(".") + ")"
-          case RelCfg(path) =>
-            "RelCfg(" + path.mkString(".") + ")"
           case r: Maven =>
             r.toString
         }
       }
     }
 
-  def ofBld(path: Vector[String], bld: com.rocketfuel.build.mool.Bld): Dependency = {
+  def ofBld(path: MoolPath, bld: com.rocketfuel.build.mool.Bld): Dependency = {
     bld.maven_specs match {
       case None =>
         Bld(path)
@@ -39,115 +35,49 @@ object Dependency {
     }
   }
 
-  /**
-    * Creates a dependency for a RelCfg's Bld.
-    *
-    * If the Bld is in another RelCfg, depend on the RelCfg.
-    *
-    * If the Bld is in this RelCfg, give the remote dependency or nothing.
-    */
-  def ofBldOrOwner(moolModel: Model, relCfgPath: MoolPath, bldPath: MoolPath): Set[Dependency] = {
-    val bldRelCfgs = moolModel.bldsToRelCfgs(bldPath) - bldPath
-
-    val bld = moolModel.blds(bldPath)
-
-    for {
-      bldRelCfg<- bldRelCfgs
-      dependency <- (bldRelCfg == relCfgPath, bld.maven_specs) match {
-                      case (true, Some(mavenSpecs)) =>
-                        Set[Dependency](
-                          Dependency.Maven(
-                            groupId = mavenSpecs.group_id,
-                            artifactId = mavenSpecs.artifact_id,
-                            version = mavenSpecs.version
-                          )
-                        )
-                      case (false, _) =>
-                        Set[Dependency](Dependency.RelCfg(bldRelCfg))
-                      case _ =>
-                        Set.empty[Dependency]
-                    }
-    } yield dependency
-  }
-
 }
 
 object DependencyTree {
-  def ofRelCfgs(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
-    val roots =
-      model.relCfgs.keys.toStream.map(Dependency.RelCfg)
-
-    val rootsWithSelves =
-      roots.map(root => (Vector[Dependency](root), root))
-
-    Tree.unfoldForest[(Vector[Dependency], Dependency), (Vector[Dependency], Dependency)](rootsWithSelves) {
-      case (parents, d: Dependency.RelCfg) =>
-        lazy val children =
-          for {
-            bldPath <- model.relCfgsToBld.get(d.path).flatten.toStream
-            bld = model.blds(bldPath)
-            bldDependency = Dependency.ofBld(bldPath, bld)
-            if ! parents.contains(bldDependency)
-          } yield {
-            (parents :+ bldDependency, bldDependency)
-          }
-        ((parents, d), () => children)
-      case (parents, d: Dependency.Bld) =>
-        lazy val children =
-          for {
-            bldPath <- model.bldsToBlds(d.path).toStream
-            bld = model.blds(bldPath)
-            bldDependency = Dependency.ofBld(bldPath, bld)
-            if ! parents.contains(bldDependency)
-          } yield {
-            (parents :+ bldDependency, bldDependency)
-          }
-        ((parents, d), () => children)
-      case (parents, r: Dependency.Maven) =>
-        ((parents, r), () => Stream.empty)
-    }
-  }
-
-  private def unfoldBlds(model: Model, blds: Map[Vector[String], Bld]): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+  private def unfoldBlds(model: Model, blds: Map[MoolPath, Bld]): Vector[StrictTree[(Vector[Dependency], Dependency)]] = {
     val roots =
       blds.map(b => Dependency.ofBld(b._1, b._2))
 
     val rootsWithSelves =
       roots.map(root => (Vector[Dependency](root), root))
 
-    Tree.unfoldForest[(Vector[Dependency], Dependency), (Vector[Dependency], Dependency)](rootsWithSelves.toStream) {
+    StrictTree.unfoldForest[(Vector[Dependency], Dependency), (Vector[Dependency], Dependency)](rootsWithSelves.toVector) {
       case (parents, d: Dependency.Bld) =>
-        lazy val children =
+        val children =
           for {
-            bldPath <- model.bldsToBlds(d.path).toStream
+            bldPath <- model.bldsToBlds(d.path).toVector
             bld = model.blds(bldPath)
             bldDependency = Dependency.ofBld(bldPath, bld)
             if !parents.contains(bldDependency)
           } yield {
             (parents :+ bldDependency, bldDependency)
           }
-        ((parents, d), () => children)
+        ((parents, d), children)
       case (parents, r: Dependency.Maven) =>
-        ((parents, r), () => Stream.empty)
+        ((parents, r), Vector.empty)
       case _ =>
         throw new IllegalArgumentException("BLD dependent on a RelCfg")
     }
   }
 
-  def ofBlds(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+  def ofBlds(model: Model): Vector[StrictTree[(Vector[Dependency], Dependency)]] = {
     val nonTestRoots = model.blds.filter(! _._2.rule_type.contains("test"))
 
     unfoldBlds(model, nonTestRoots)
   }
 
-  def ofTestBlds(model: Model): Stream[Tree[(Vector[Dependency], Dependency)]] = {
+  def ofTestBlds(model: Model): Vector[StrictTree[(Vector[Dependency], Dependency)]] = {
     val testRoots = model.blds.filter(_._2.rule_type.contains("test"))
 
     unfoldBlds(model, testRoots)
   }
 
-  def gorns(tree: Tree[(Vector[Dependency], Dependency)]): Set[Vector[Dependency]] = {
-    tree.foldRight[Set[Vector[Dependency]]](Set.empty) {
+  def gorns(StrictTree: StrictTree[(Vector[Dependency], Dependency)]): Set[Vector[Dependency]] = {
+    StrictTree.foldRight[Set[Vector[Dependency]]](Set.empty) {
       case ((parentsAndHere, here), accum) =>
         val parentGorn = parentsAndHere.dropRight(1)
         (accum - parentGorn) + parentsAndHere

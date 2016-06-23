@@ -3,11 +3,10 @@ package com.rocketfuel.build.mool
 import argonaut._
 import java.io.InputStream
 import java.nio.file.{Files, Path}
-import scalaz.{-\/, \/-}
 
 case class Bld(
   rule_type: String,
-  srcs: Option[MoolPath] = None,
+  srcs: Option[Vector[String]] = None,
   deps: Option[Vector[String]] = None,
   compileDeps: Option[Vector[String]] = None,
   scala_version: Option[String] = None,
@@ -15,11 +14,12 @@ case class Bld(
   package_modules: Option[Vector[String]] = None,
   package_tests: Option[Vector[String]] = None
 ) {
+
   def srcPaths(model: Model, bldPath: MoolPath): Vector[Path] =
     srcPaths(model.root, bldPath)
 
   def srcPaths(root: Path, bldPath: MoolPath): Vector[Path] = {
-    val bldDir = bldPath.foldLeft(root)(_.resolve(_))
+    val bldDir = bldPath.dropRight(1).foldLeft(root)(_.resolve(_))
     for {
       src <- srcs.getOrElse(Vector.empty)
     } yield bldDir.resolve(src)
@@ -27,7 +27,7 @@ case class Bld(
 
   def depPaths(bldPath: MoolPath): Vector[MoolPath] =
     for {
-      dep <- deps.getOrElse(Vector.empty)
+      dep <- deps.toVector.flatten
     } yield Bld.relativePath(bldPath, dep)
 
   def compileDepPaths(bldPath: MoolPath): Vector[MoolPath] =

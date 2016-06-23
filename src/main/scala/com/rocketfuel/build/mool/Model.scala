@@ -22,19 +22,24 @@ case class Model(
     }
   }
 
-  /**
-    * Given a path to a Bld, get all the paths to Blds that it depends on. Transitive.
-    */
-  val bldsToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
-    def aux(accumulator: Set[MoolPath], bldStack : Vector[MoolPath]): Set[MoolPath] = {
+  val bldsToCompileBlds: Map[MoolPath, Set[MoolPath]] = {
+    for {
+      (bldPath, bld) <- blds
+    } yield {
+      bldPath -> bld.compileDepPaths(bldPath).toSet
+    }
+  }
+
+  private def transitive(getPaths: Bld => MoolPath => Vector[MoolPath]): Map[MoolPath, Set[MoolPath]] = {
+    def aux(accumulator: Set[MoolPath], bldStack: Vector[MoolPath]): Set[MoolPath] = {
       bldStack.headOption match {
         case None =>
           accumulator
 
         case Some(bldPath) =>
           val bld = blds(bldPath)
-          val depPaths = bld.depPaths(bldPath)
-          val newDepPaths = depPaths.toSet -- accumulator
+          val deps = getPaths(bld)(bldPath)
+          val newDepPaths = deps.toSet -- accumulator
 
           val newAccumulator = accumulator ++ newDepPaths
           val newStack = bldStack.tail ++ newDepPaths
@@ -45,6 +50,20 @@ case class Model(
     for {
       (bldPath, _) <- blds
     } yield bldPath -> aux(Set.empty, Vector(bldPath))
+  }
+
+  /**
+    * Given a path to a Bld, get all the paths to Blds that it depends on. Transitive.
+    */
+  val bldsToBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
+    transitive(bld => bldPath => bld.depPaths(bldPath))
+  }
+
+  /**
+    * Given a path to a Bld, get all the paths to Blds that it depends on for compilation. Transitive.
+    */
+  val bldsToCompileBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
+    transitive(bld => bldPath => bld.compileDepPaths(bldPath))
   }
 
   val testBlds = {

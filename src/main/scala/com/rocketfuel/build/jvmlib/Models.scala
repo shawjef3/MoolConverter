@@ -1,7 +1,7 @@
 package com.rocketfuel.build.jvmlib
 
 import com.rocketfuel.build.mool
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
 
 case class Models(
   models: Map[mool.MoolPath, Model],
@@ -9,13 +9,11 @@ case class Models(
   moolRoot: Path
 ) {
 
-  def copies(destinationRoot: Path): Map[Path, Path] = {
-    for {
-      (relCfgPath, model) <- models
-      relCfg = moolModel.relCfgs(relCfgPath)
-      bldPath <- relCfg.`jar-with-dependencies`.toTraversable.map(_.targetPath)
+  val copies: Map[Path, Path] = {
+    val i = for {
+      (bldPath, model) <- models
       bld = moolModel.blds(bldPath)
-      srcPath = destinationRoot.resolve(relCfgPath.last).resolve("src")
+      srcPath = Paths.get(bldPath.drop(1).mkString("/")).resolve("src")
       (configurationName, configuration) <- model.configurations
       file <- configuration.files
     } yield {
@@ -29,9 +27,9 @@ case class Models(
             "resources"
           case "java_proto_lib" =>
             "proto"
-          case "java_lib" =>
+          case "java_lib" | "java_test" =>
             "java"
-          case "scala_lib" =>
+          case "scala_lib" | "scala_test" =>
             "scala"
         }
 
@@ -42,13 +40,15 @@ case class Models(
 
       (file, destinationFile)
     }
+
+    i.toMap
   }
 }
 
 object Models {
   def ofMoolRepository(moolRoot: Path): Models = {
     val moolModel = mool.Model.ofRepository(moolRoot)
-    val models = Model.ofMoolRelCfgs(moolModel)
+    val models = Model.ofMoolBlds(moolModel)
     Models(
       models = models,
       moolModel = moolModel,
