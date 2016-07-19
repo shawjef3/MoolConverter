@@ -12,8 +12,8 @@ libraryDependencies ++= Seq(
   "io.argonaut" %% "argonaut" % "6.1a",
   "org.scalaz" %% "scalaz-core" % "7.2.4",
   //logging
-  "org.slf4s" %% "slf4s-api" % "1.7.13",
-  "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.5",
+  "org.apache.logging.log4j" % "log4j-api" % "2.6.1",
+  "org.apache.logging.log4j" % "log4j-core" % "2.6.1",
   //testing
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "com.google.jimfs" % "jimfs" % "1.1" % "test",

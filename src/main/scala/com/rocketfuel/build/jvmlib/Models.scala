@@ -11,27 +11,14 @@ case class Models(
 
   val copies: Map[Path, Path] = {
     val i = for {
-      (bldPath, model) <- models
-      bld = moolModel.blds(bldPath)
-      srcPath = Paths.get(bldPath.drop(1).mkString("/")).resolve("src")
-      (configurationName, configuration) <- model.configurations
-      file <- configuration.files
+      (relCfgPath, model) <- models
+      (confName, conf) <- model.configurations
+      (fileLanguage, files) <- conf.files
+      file <- files
     } yield {
 
       val relative = moolRoot.relativize(file)
       val relativeWithoutJava = relative.subpath(1, relative.getNameCount)
-
-      val srcLanguage =
-        bld.rule_type match {
-          case "file_coll" =>
-            "resources"
-          case "java_proto_lib" =>
-            "proto"
-          case "java_lib" | "java_test" =>
-            "java"
-          case "scala_lib" | "scala_test" =>
-            "scala"
-        }
 
       val destinationFile =
         srcPath.resolve(configurationName).
@@ -47,10 +34,21 @@ case class Models(
 
 object Models {
   def ofMoolRepository(moolRoot: Path): Models = {
-    val moolModel = mool.Model.ofRepository(moolRoot)
-    val models = Model.ofMoolBlds(moolModel)
+    val moolModel = mool.Model.ofRepository(moolRoot, Map.empty).resolveConflicts
+    val models = Model.ofMoolRelCfgs(moolModel)
     Models(
       models = models,
+      moolModel = moolModel,
+      moolRoot = moolRoot
+    )
+  }
+
+  def ofMoolRepository2(moolRoot: Path): Models = {
+    val moolModel = mool.Model.ofRepository(moolRoot, Map.empty)
+    val topDown = mool.Dependency.runTopDown(moolModel)
+
+    Models(
+      models = topDown.map(d => d.rootPath -> Model.ofDescendState(d)).toMap,
       moolModel = moolModel,
       moolRoot = moolRoot
     )

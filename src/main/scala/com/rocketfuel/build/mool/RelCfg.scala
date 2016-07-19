@@ -9,8 +9,7 @@ case class RelCfg(
   artifact_id: String,
   base_version: String,
   `jar-no-dependencies`: Option[RelCfg.Artifact] = None,
-  `jar-with-dependencies`: Option[RelCfg.Artifact] = None,
-  relCfgDependencies: Set[MoolPath] = Set.empty
+  `jar-with-dependencies`: Option[RelCfg.Artifact] = None
 )
 
 object RelCfg {
@@ -46,7 +45,7 @@ object RelCfg {
     artifact_path: String
   ) {
     val targetPath: MoolPath =
-      //we're lucky that targets are always absolute paths, so we can use Bld.absolutePath.
+    //we're lucky that targets are always absolute paths, so we can use Bld.absolutePath.
       Bld.absolutePath(target)
   }
 
@@ -57,4 +56,5 @@ object RelCfg {
 
   implicit val codecJson: CodecJson[RelCfg] =
     CodecJson.casecodec5((a: String,b: String,c: String,d: Option[RelCfg.Artifact],e: Option[RelCfg.Artifact]) => apply(a,b,c,d,e), (r: RelCfg) => Some((r.group_id, r.artifact_id, r.base_version, r.`jar-no-dependencies`, r.`jar-with-dependencies`)))("group_id", "artifact_id", "base_version", "jar-no-dependencies", "jar-with-dependencies")
+
 }

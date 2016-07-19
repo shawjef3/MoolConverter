@@ -1,5 +1,6 @@
-package com.rocketfuel.build.mool
+package com.rocketfuel.build.mool.json
 
+import com.rocketfuel.build.mool.Bld
 import org.scalatest.FunSuite
 
 class BldSpec

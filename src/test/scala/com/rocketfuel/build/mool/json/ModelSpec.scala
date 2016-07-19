@@ -1,5 +1,6 @@
-package com.rocketfuel.build.mool
+package com.rocketfuel.build.mool.json
 
+import com.rocketfuel.build.mool._
 import java.nio.file.Paths
 import org.scalatest.FunSuite
 
@@ -63,7 +64,8 @@ class ModelSpec extends FunSuite {
       root = Paths.get("."),
       blds = blds,
       relCfgs = relCfgs,
-      versions = Map.empty
+      versions = Map.empty,
+      bldToTestBldSupplement = Map.empty
     )
 
   test("bldsToBlds") {

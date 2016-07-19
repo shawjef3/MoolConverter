@@ -34,6 +34,7 @@ case class Bld(
     for {
       compileDep <- compileDeps.getOrElse(Vector.empty)
     } yield Bld.relativePath(bldPath, compileDep)
+
 }
 
 object Bld {
@@ -74,7 +75,7 @@ object Bld {
     * @param pathString
     * @return
     */
-  def absolutePath(pathString: String): Vector[String] = {
+  def absolutePath(pathString: String): MoolPath = {
     val split = pathString.split('.').toVector
     split.drop(1)
   }
