@@ -20,6 +20,7 @@ case class Model(
   versions: Map[MoolPath, Set[Version]],
   bldToTestBldSupplement: Map[MoolPath, Set[MoolPath]]
 ) extends Graphviz {
+
   /**
     * Given a path to a Bld, get all the paths to Blds that it depends on. Intransitive.
     */
@@ -36,7 +37,7 @@ case class Model(
     */
   val bldsToBldsReverse: Map[MoolPath, Set[MoolPath]] = {
     val all = for {
-      (src, dsts) <- bldsToBlds.toTraversable
+      (src, dsts) <- bldsToBlds.toVector
       dst <- dsts
     } yield dst -> src
 
@@ -56,7 +57,7 @@ case class Model(
     */
   val bldsToCompileBldsReverse: Map[MoolPath, Set[MoolPath]] = {
     val all = for {
-      (src, dsts) <- bldsToCompileBlds.toTraversable
+      (src, dsts) <- bldsToCompileBlds.toVector
       dst <- dsts
     } yield dst -> src
 
@@ -119,7 +120,7 @@ case class Model(
      */
     val withoutTest =
       for {
-        (testBldPath, testBld) <- testBlds.toTraversable
+        (testBldPath, testBld) <- testBlds.toVector
         if testBldPath.nonEmpty && testBldPath.last.endsWith("Test")
         bldPath = testBldPath.init :+ testBldPath.last.dropRight(4)
         if blds.contains(bldPath) && testBld.depPaths(testBldPath).contains(bldPath)
@@ -130,7 +131,7 @@ case class Model(
      */
     val onlyOneDep =
       for {
-        (testBldPath, testBld) <- testBlds.toTraversable
+        (testBldPath, testBld) <- testBlds.toVector
         depPaths = bldsToBlds(testBldPath)
         deps = blds.filterKeys(depPaths.contains)
         regularDeps = deps.filterNot(bld => bld._2.rule_type.contains("test") || bld._2.maven_specs.nonEmpty)
@@ -196,10 +197,10 @@ case class Model(
     */
   val relCfgsToExclusiveBlds: Map[MoolPath, Set[MoolPath]] = {
     for {
-      (relCfgPath, blds) <- relCfgsToBldsTransitive
+      (relCfgPath, bldPaths) <- relCfgsToBldsTransitive
     } yield {
       relCfgPath ->
-        blds.filter { bldPath =>
+        bldPaths.filter { bldPath =>
           ! relCfgsToBldsTransitive.exists {
             case (otherRelCfgPath, otherBlds) =>
               otherRelCfgPath != relCfgPath &&
@@ -216,7 +217,7 @@ case class Model(
   val bldsToRelCfgsTransitive: Map[MoolPath, Set[MoolPath]] = {
     val one =
       for {
-        (relCfg, blds) <- relCfgsToBldsTransitive.toTraversable //allow duplicates
+        (relCfg, blds) <- relCfgsToBldsTransitive.toVector //allow duplicates
         bld <- blds
       } yield (bld, relCfg)
 
@@ -261,7 +262,7 @@ case class Model(
   val bldConflicts: Map[MoolPath, Set[MoolPath]] = {
     val indirectBldToRelCfg =
       for {
-        (relCfgPath, bldPaths) <- relCfgsToBldsTransitive.toTraversable
+        (relCfgPath, bldPaths) <- relCfgsToBldsTransitive.toVector
         bldPath <- bldPaths
       } yield bldPath -> relCfgPath
 

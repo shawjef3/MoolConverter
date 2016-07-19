@@ -15,6 +15,9 @@ case class Bld(
   package_tests: Option[Vector[String]] = None
 ) {
 
+  def language: String =
+    Bld.language(rule_type)
+
   def srcPaths(model: Model, bldPath: MoolPath): Vector[Path] =
     srcPaths(model.root, bldPath)
 
@@ -79,6 +82,21 @@ object Bld {
     val split = pathString.split('.').toVector
     split.drop(1)
   }
+
+  def language(ruleType: String): String =
+    ruleType match {
+      case "file_coll" =>
+        "resources"
+      case "java_proto_lib" =>
+        "proto"
+      case "java_lib" | "java_test" =>
+        "java"
+      case "scala_lib" | "scala_test" =>
+        "scala"
+      case "release_package" =>
+        // These projects don't seem to have files, so who cares.
+        ""
+    }
 
   case class MavenSpecs(
     artifact_id: String,

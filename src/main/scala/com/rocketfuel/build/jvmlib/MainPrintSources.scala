@@ -12,17 +12,9 @@ object MainPrintSources extends App {
   } {
     val modelFiles = for {
       (configurationName, configuration) <- model.configurations
+      (language, languageFiles) <- configuration.files
     } yield {
-      val dependencyFiles =
-        configuration.dependencies.flatMap {
-          case mool.Dependency.Bld(depPath) =>
-            val dep = moolModel.blds(depPath)
-            dep.srcPaths(moolModel, depPath)
-          case _ =>
-            Vector[Path]()
-        }
-
-      configurationName -> (configuration.files.toSet ++ dependencyFiles)
+      configurationName -> languageFiles
     }
     println(modelPath -> modelFiles)
   }

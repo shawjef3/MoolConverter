@@ -22,7 +22,7 @@ trait Graphviz {
       (relCfg, blds) <- relCfgsToBldsTransitive -- bldConflicts.keys
     } yield {
       val edges = for {
-        (src, dsts) <- bldsToBlds.filterKeys(blds.contains).toTraversable
+        (src, dsts) <- bldsToBlds.filterKeys(blds.contains).toVector
         srcString = src.mkString(".")
         dst <- dsts
       } yield Edge(srcString, dst.mkString("."), None)
@@ -52,11 +52,11 @@ trait Graphviz {
     } yield {
       val blds = relCfgsToBldsTransitive(relCfgPath)
       val depEdges = for {
-        bld <- blds.toTraversable
+        bld <- blds.toVector
         dst <- bldsToBlds(bld)
       } yield Edge(bld.mkString("."), dst.mkString("."), None)
       val compileDepEdges = for {
-        bld <- blds.toTraversable
+        bld <- blds.toVector
         dst <- bldsToCompileBldsTransitive(bld)
       } yield Edge(bld.mkString("."), dst.mkString("."), Graphviz.compile)
       relCfgPath ->

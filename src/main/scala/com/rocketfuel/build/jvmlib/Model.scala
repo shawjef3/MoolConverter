@@ -18,10 +18,52 @@ object Model {
     version: String
   )
 
+  object Identifier {
+    val valueOf: PartialFunction[mool.Dependency, Identifier] = {
+        case mool.Dependency.Maven(groupId, artifactId, version) =>
+          Identifier(groupId, artifactId, version)
+      }
+  }
+
   case class Configuration(
-    dependencies: Set[Identifier],
-    files: Map[String, Set[Path]]
+    dependencies: Set[Identifier] = Set.empty,
+    files: Map[String, Set[Path]] = Map.empty
   )
+
+  object Configuration {
+    def valueOf(moolModel: mool.Model, dependencies: Set[mool.Dependency]): Configuration = {
+      val deps =
+        for {
+          dependency <- dependencies.toVector
+        } yield {
+          dependency match {
+            case mool.Dependency.Bld(bldPath) =>
+              val bld = moolModel.blds(bldPath)
+              val files = bld.srcPaths(moolModel, bldPath)
+              Left(bld.language -> files.toSet)
+            case mool.Dependency.Maven(groupId, artifactId, version) =>
+              Right(Identifier(groupId, artifactId, version))
+            case mool.Dependency.RelCfg(moolPath) =>
+              val relCfg = moolModel.relCfgs(moolPath)
+              Right(Identifier(relCfg.group_id, relCfg.artifact_id, "0"))
+          }
+        }
+      deps.foldLeft(Configuration()) {
+        case (accum, Left((fileConfig, fileName))) =>
+          accum.files.get(fileConfig) match {
+            case Some(existing) =>
+              val updatedFiles =
+                accum.files + (fileConfig -> (existing ++ fileName))
+              accum.copy(files = updatedFiles)
+            case None =>
+              accum.copy(files = accum.files + (fileConfig -> fileName))
+          }
+
+        case (accum, Right(mvn)) =>
+          accum.copy(dependencies = accum.dependencies + mvn)
+      }
+    }
+  }
 
   /**
     * Create a Model from one Mool BLD.
@@ -37,22 +79,10 @@ object Model {
     val sourcePaths =
       bld.srcPaths(moolModel, path)
 
-    val srcLanguage =
-      bld.rule_type match {
-        case "file_coll" =>
-          "resources"
-        case "java_proto_lib" =>
-          "proto"
-        case "java_lib" | "java_test" =>
-          "java"
-        case "scala_lib" | "scala_test" =>
-          "scala"
-      }
-
     val mainConfiguration =
       Configuration(
-        dependencies = dependencies,
-        files = Map(srcLanguage -> sourcePaths.toSet)
+        dependencies = dependencies.collect(Identifier.valueOf),
+        files = Map(bld.language -> sourcePaths.toSet)
       )
 
     val testBldPaths =
@@ -69,24 +99,13 @@ object Model {
         testBldPath <- testBldPaths
         testBld = moolModel.blds(testBldPath)
       } yield {
-        val srcLanguage =
-          testBld.rule_type match {
-            case "file_coll" =>
-              "resources"
-            case "java_proto_lib" =>
-              "proto"
-            case "java_lib" | "java_test" =>
-              "java"
-            case "scala_lib" | "scala_test" =>
-              "scala"
-          }
         val sourcePaths = testBld.srcPaths(moolModel, testBldPath)
-        srcLanguage -> sourcePaths.toSet
+        testBld.language -> sourcePaths.toSet
       }
 
     val testConfiguration =
       Configuration(
-        dependencies = testDependencies,
+        dependencies = testDependencies.collect(Identifier.valueOf),
         files = testSourcePaths.toMap
       )
 
@@ -102,7 +121,7 @@ object Model {
       }
 
     Model(
-      identifier = identifier,
+      identifier = identifier.get,
       scalaVersion = bld.scala_version,
       repository = bld.maven_specs.map(_.repo_url),
       configurations = Map("main" -> mainConfiguration, "test" -> testConfiguration)
@@ -143,22 +162,10 @@ object Model {
             Vector.empty
         }
 
-      val srcLanguage =
-        bld.rule_type match {
-          case "file_coll" =>
-            "resources"
-          case "java_proto_lib" =>
-            "proto"
-          case "java_lib" | "java_test" =>
-            "java"
-          case "scala_lib" | "scala_test" =>
-            "scala"
-        }
-
       val configuration =
         Configuration(
-          dependencies = dependencies.filter(_.isInstanceOf[mool.Dependency.Maven]),
-          files = Map(srcLanguage -> sourcePaths)
+          dependencies = dependencies.collect(Identifier.valueOf),
+          files = Map(bld.language -> sourcePaths)
         )
 
       val identifier =
@@ -169,32 +176,11 @@ object Model {
         )
 
       Model(
-        identifier = Some(identifier),
+        identifier = identifier,
         scalaVersion = bld.scala_version,
         repository = bld.maven_specs.map(_.repo_url),
         configurations = Map("main" -> configuration)
       )
-    }
-  }
-
-  /**
-    * Create a Model for each RelCfg.
-    *
-    * @param model
-    * @return
-    */
-  def ofMoolRelCfgs(model: mool.Model): Map[mool.MoolPath, Model] = {
-    for {
-      (path, relCfg) <- model.relCfgs
-      model <- ofMoolRelCfg(model)(path, relCfg)
-    } yield path -> model
-  }
-
-  def testBlds(moolModel: mool.Model)(path: mool.MoolPath): Map[mool.MoolPath, mool.Bld] = {
-    moolModel.blds.filter {
-      case (bldPath, bld) =>
-        bld.rule_type.contains("test") &&
-          moolModel.bldsToBlds.get(bldPath).exists(_.contains(path))
     }
   }
 
@@ -245,7 +231,8 @@ object Model {
             Set.empty[mool.Dependency]
           case None =>
             val relCfgs = moolModel.bldsToRelCfgsTransitive(notMyBldPath)
-            assert(relCfgs.size <= 1)
+            if (relCfgs.size > 1)
+              assert(false)
             Set[mool.Dependency](mool.Dependency.RelCfg(relCfgs.head))
         }
       } yield dependency
@@ -254,21 +241,23 @@ object Model {
       notMyBldDependencies
   }
 
-  def ofDescendState(d: mool.Dependency.DescendState): Model = {
+  def ofDescendState(d: Models.DescendState): Model = {
     val identifier =
       Model.Identifier(
         groupId = d.root.group_id,
         artifactId = d.root.artifact_id,
-        version = d.root.base_version
+        version = "0"
+      )
+
+    val configurations =
+      Map(
+        "main" -> Model.Configuration.valueOf(d.model, d.dependencies.main),
+        "test" -> Model.Configuration.valueOf(d.model, d.dependencies.test)
       )
 
     Model(
-      identifier = Some(identifier),
-      configurations =
-        Map(
-          "main" -> Model.Configuration(d.dependencies.main, d.sources.main),
-          "test" -> Model.Configuration(d.dependencies.test, d.sources.test)
-        )
+      identifier = identifier,
+      configurations = configurations
     )
   }
 
