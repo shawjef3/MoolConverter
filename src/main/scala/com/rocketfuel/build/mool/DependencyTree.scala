@@ -59,21 +59,21 @@ object DependencyTree {
     model: Model,
     blds: Map[MoolPath, Bld],
     maxDepth: Int
-  ): Stream[Tree[Dependency]] = {
+  ): Vector[StrictTree[Dependency]] = {
     /*
     These are the roots of the dependency tree creation. It's not enough
     to simply have the root nodes. There is also a set of parent nodes to
     prevent infinite loops.
      */
     val roots =
-      blds.toStream.map(b => (Vector(b._1), b._2))
+      blds.toVector.map(b => (Vector(b._1), b._2))
 
     val dependencies =
       for {
         (bldPath, bld) <- model.blds
       } yield bldPath -> Dependency.ofBld(bldPath, bld)
 
-    Tree.unfoldForest[(Vector[MoolPath], Bld), Dependency](roots) {
+    StrictTree.unfoldForest[(Vector[MoolPath], Bld), Dependency](roots) {
       case (parents, hereBld: Bld) =>
         val herePath = parents.head
 
@@ -83,29 +83,21 @@ object DependencyTree {
         if (parents.size < maxDepth) {
           val deps =
             for {
-              depPath <- model.bldsToBlds(herePath).toStream
+              depPath <- model.bldsToBlds(herePath).toVector
               if !parents.contains(depPath)
             } yield {
               val depBld = model.blds(depPath)
               (depPath +: parents, depBld)
             }
-          val compileDeps =
-            for {
-              depPath <- model.bldsToCompileBlds(herePath).toStream
-              if !parents.contains(depPath)
-            } yield {
-              val depBld = model.blds(depPath)
-              (depPath +: parents, depBld)
-            }
-          (hereDep, () => deps ++ compileDeps)
-        } else (hereDep, () => Stream.Empty)
+          (hereDep, deps)
+        } else (hereDep, Vector.empty)
     }
   }
 
   def ofRelCfgs(
     model: Model,
     maxDepth: Int
-  ): Stream[Tree[Dependency]] = {
+  ): Vector[StrictTree[Dependency]] = {
 
     val bldPaths =
       for {
@@ -119,18 +111,18 @@ object DependencyTree {
     val bldTree = unfoldBlds(model, bldPaths.map(kvp => kvp.copy(_2 = kvp._2._2)), maxDepth)
 
     bldTree.map {
-      case child@Tree.Node(Dependency.Bld(path), forest) =>
+      case child@StrictTree(Dependency.Bld(path), forest) =>
         val (relCfgPath, _) = bldPaths(path)
-        Tree.Node(Dependency.RelCfg(relCfgPath), Stream(child))
+        StrictTree(Dependency.RelCfg(relCfgPath), Vector(child))
     }
   }
 
-  def ofRootBlds(model: Model, maxDepth: Int): Stream[Tree[Dependency]] = {
+  def ofRootBlds(model: Model, maxDepth: Int): Vector[StrictTree[Dependency]] = {
     val rootBlds = model.blds.filter(! _._2.rule_type.contains("test")) -- model.bldsToBlds.values.flatten
     unfoldBlds(model, rootBlds, maxDepth)
   }
 
-  def ofTestBlds(model: Model, maxDepth: Int): Stream[Tree[Dependency]] = {
+  def ofTestBlds(model: Model, maxDepth: Int): Vector[StrictTree[Dependency]] = {
     val testRoots = model.blds.filter(_._2.rule_type.contains("test")) -- model.bldsToBlds.values.flatten
     unfoldBlds(model, testRoots, maxDepth)
   }

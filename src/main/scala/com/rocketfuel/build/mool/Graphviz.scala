@@ -1,8 +1,9 @@
 package com.rocketfuel.build.mool
 
-import com.rocketfuel.graphviz.{Cluster, Edge, Graph}
+import com.rocketfuel.graphviz.{Cluster, Edge, Graph, Node}
 import java.nio.file.{Files, Path}
 import org.apache.commons.io.IOUtils
+import scala.sys.process._
 
 trait Graphviz {
   self: Model =>
@@ -11,10 +12,10 @@ trait Graphviz {
     * Blds that don't belong to any RelCfg
     * @return
     */
-  def nodes: Set[String] = {
+  def nodes: Set[Node] = {
     for {
       bldPath <- bldOrphans ++ testBldOrphans
-    } yield bldPath.mkString(".")
+    } yield Node(bldPath.mkString("."))
   }
 
   def clusters: Set[Cluster] = {
@@ -46,21 +47,26 @@ trait Graphviz {
       edges = edges
     )
 
+  private implicit class IsLocal(bldPath: MoolPath) {
+    def isLocal: Boolean = {
+      !bldPath.startsWith(Vector("java", "mvn"))
+    }
+  }
+
   def toRelCfgGraphs: Map[MoolPath, Graph] =
     for {
       (relCfgPath, relCfg) <- relCfgs
     } yield {
-      val blds = relCfgsToBldsTransitive(relCfgPath)
+      val localBlds = relCfgsToBldsTransitive(relCfgPath).filter(_.isLocal)
       val depEdges = for {
-        bld <- blds.toVector
-        dst <- bldsToBlds(bld)
+        bld <- localBlds.toVector
+        dst <- bldsToBlds(bld).filter(_.isLocal)
       } yield Edge(bld.mkString("."), dst.mkString("."), None)
-      val compileDepEdges = for {
-        bld <- blds.toVector
-        dst <- bldsToCompileBldsTransitive(bld)
-      } yield Edge(bld.mkString("."), dst.mkString("."), Graphviz.compile)
+      val root = for {
+        rootBldPath <- relCfgsToBld(relCfgPath)
+      } yield Node(rootBldPath.mkString("."), Map("color" -> "red", "shape" -> "box"))
       relCfgPath ->
-        Graph(Set.empty, Set.empty, (depEdges ++ compileDepEdges).toSet)
+        Graph(root.toSet, Set.empty, depEdges.toSet)
     }
 
   def writeRelCfgGraphs(dir: Path): Vector[Path] = {
@@ -74,21 +80,10 @@ trait Graphviz {
     }
   } toVector
 
-  def renderRelCfgGraphCommands(dir: Path, layout: String, format: String): Vector[String] = {
-    for {
-      relCfgDot <- writeRelCfgGraphs(dir)
-    } yield {
-      val relCfgPng = relCfgDot.getParent.resolve(relCfgDot.getFileName.toString.dropRight(4) + s"-$layout.$format")
-      s"dot $relCfgDot -T$format -K$layout -o$relCfgPng"
+  def renderRelCfgGraphs(dir: Path, format: String): Unit = {
+    for (relCfgDot <- writeRelCfgGraphs(dir)) {
+      s"dot -T$format -O $relCfgDot".!
     }
   }
 
-}
-
-object Graphviz {
-  object Layout {
-    val Circo = "circo"
-  }
-
-  val compile = Some("compile")
 }

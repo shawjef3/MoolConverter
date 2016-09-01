@@ -14,18 +14,17 @@ http://www.graphviz.org/content/dot-language
   * @param edges nodes that are connected but not in a group
   */
 case class Graph(
-  nodes: Set[String],
+  nodes: Set[Node],
   clusters: Set[Cluster],
   edges: Set[Edge]
 ) {
   def toDot: String = {
     val sb = new StringBuilder()
 
-    sb.append("digraph mool {\n  node [fontname = \"Liberation Mono:style=Regular\"]\n")
+    sb.append("digraph mool {\n  rankdir=LR\n  node [fontname = \"Liberation Mono:style=Regular\"]\n")
 
     for (node <- nodes) {
-      sb.appendIndented(1, node.dotQuote)
-      sb.append('\n')
+      node.toDot(1, sb)
     }
 
     clusters.foreach(c => c.toDot(1, sb))
@@ -88,4 +87,36 @@ case class Edge(
         false
     }
   }
+}
+
+case class Node(
+  name: String,
+  attributes: Map[String, String] = Map.empty
+) {
+
+  def toDot(indent: Int, sb: StringBuilder): Unit = {
+    sb.appendIndented(indent, name.dotQuote)
+    if (attributes.nonEmpty) {
+      sb.append(" [")
+      for ((name, value) <- attributes) {
+        sb.append(name)
+        sb.append('=')
+        sb.append(value)
+        sb.append(',')
+      }
+      sb.deleteCharAt(sb.length - 1)
+      sb.append(']')
+    }
+    sb.append('\n')
+  }
+
+  override def hashCode(): Int = name.hashCode
+
+  override def equals(obj: scala.Any): Boolean =
+    obj match {
+      case that: Node =>
+        this.name == that.name
+      case _ =>
+        false
+    }
 }

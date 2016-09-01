@@ -37,8 +37,8 @@ object MainPrintUnresolvedTests extends ModelApp {
   val testBlds = DependencyTree.ofTestBlds(model, 2)
 
   testBlds.filter {
-    case n@Tree.Node(Dependency.Bld(path), children) =>
-      val main: Tree[Dependency] = Tree.Leaf(Dependency.Bld(path.init :+ path.last.dropRight(4)))
+    case n@StrictTree(Dependency.Bld(path), children) =>
+      val main: StrictTree[Dependency] = StrictTree.Leaf(Dependency.Bld(path.init :+ path.last.dropRight(4)))
       ! children.exists(d => d === main)
     case _ =>
       false

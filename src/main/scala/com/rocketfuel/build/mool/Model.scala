@@ -4,6 +4,7 @@ import com.rocketfuel.build.GroupByKeys._
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable
+import scalaz.StrictTree
 
 /**
   *
@@ -28,7 +29,7 @@ case class Model(
     for {
       (bldPath, bld) <- blds
     } yield {
-      bldPath -> bld.depPaths(bldPath).toSet
+      bldPath -> (bld.depPaths(bldPath).toSet ++ bld.compileDepPaths(bldPath).toSet)
     }
   }
 
@@ -37,27 +38,7 @@ case class Model(
     */
   val bldsToBldsReverse: Map[MoolPath, Set[MoolPath]] = {
     val all = for {
-      (src, dsts) <- bldsToBlds.toVector
-      dst <- dsts
-    } yield dst -> src
-
-    all.groupByKeys
-  }
-
-  val bldsToCompileBlds: Map[MoolPath, Set[MoolPath]] = {
-    for {
-      (bldPath, bld) <- blds
-    } yield {
-      bldPath -> bld.compileDepPaths(bldPath).toSet
-    }
-  }
-
-  /**
-    * blds to blds that depend on them for compiling
-    */
-  val bldsToCompileBldsReverse: Map[MoolPath, Set[MoolPath]] = {
-    val all = for {
-      (src, dsts) <- bldsToCompileBlds.toVector
+      (src, dsts) <- bldsToBlds.toSeq
       dst <- dsts
     } yield dst -> src
 
@@ -92,13 +73,6 @@ case class Model(
     transitive(bldsToBlds)
   }
 
-  /**
-    * Given a path to a Bld, get all the paths to Blds that it depends on for compilation. Transitive.
-    */
-  val bldsToCompileBldsTransitive: Map[MoolPath, Set[MoolPath]] = {
-    transitive(bldsToCompileBlds)
-  }
-
   val testBlds: Map[MoolPath, Bld] = {
     blds.filter(_._2.rule_type.contains("test"))
   }
@@ -114,34 +88,11 @@ case class Model(
     * the test files being part of the same Bld.
     */
   val bldsToTestBlds: Map[MoolPath, Set[MoolPath]] = {
-    /*
-    Bld to test bld, where the name of the bld to be tested is the same
-    as the test Bld, except it doesn't end in 'Test'.
-     */
-    val withoutTest =
-      for {
-        (testBldPath, testBld) <- testBlds.toVector
-        if testBldPath.nonEmpty && testBldPath.last.endsWith("Test")
-        bldPath = testBldPath.init :+ testBldPath.last.dropRight(4)
-        if blds.contains(bldPath) && testBld.depPaths(testBldPath).contains(bldPath)
-      } yield bldPath -> testBldPath
-
-    /*
-    Bld to test bld, when there is only non-test, non-maven dep.
-     */
-    val onlyOneDep =
-      for {
-        (testBldPath, testBld) <- testBlds.toVector
-        depPaths = bldsToBlds(testBldPath)
-        deps = blds.filterKeys(depPaths.contains)
-        regularDeps = deps.filterNot(bld => bld._2.rule_type.contains("test") || bld._2.maven_specs.nonEmpty)
-        if regularDeps.size == 1
-      } yield regularDeps.head._1 -> testBldPath
-
-      withoutTest.groupByKeys ++
-        onlyOneDep.groupByKeys ++
-        bldToTestBldSupplement
-  } withDefaultValue Set.empty
+    for {
+      (testPath, testBld) <- testBlds.toSeq
+      dependency <- testBld.depPaths(testPath)
+    } yield dependency -> testPath
+  }.groupByKeys.withDefaultValue(Set.empty)
 
   /**
     * Test blds that aren't attributed to any bld.
@@ -217,7 +168,7 @@ case class Model(
   val bldsToRelCfgsTransitive: Map[MoolPath, Set[MoolPath]] = {
     val one =
       for {
-        (relCfg, blds) <- relCfgsToBldsTransitive.toVector //allow duplicates
+        (relCfg, blds) <- relCfgsToBldsTransitive.toSeq //allow duplicates
         bld <- blds
       } yield (bld, relCfg)
 
@@ -230,7 +181,7 @@ case class Model(
   val relCfgToTestBlds: Map[MoolPath, Set[MoolPath]] = {
     val toReduce =
       for {
-        (testBldPath, testBld) <- testBlds.toIterable
+        (testBldPath, testBld) <- testBlds.toSeq
         bldDepPath <- testBld.depPaths(testBldPath)
         relCfgPath <- bldsToRelCfgsTransitive(bldDepPath)
       } yield relCfgPath -> testBldPath
@@ -241,7 +192,7 @@ case class Model(
   val testBldsToRelCfgs: Map[MoolPath, Set[MoolPath]] = {
     val toReduce =
       for {
-        (testBldPath, testBld) <- testBlds.toIterable
+        (testBldPath, testBld) <- testBlds.toSeq
         depPath <- testBld.depPaths(testBldPath)
         relCfgPath <- bldsToRelCfgsTransitive(depPath)
       } yield testBldPath -> relCfgPath
@@ -260,14 +211,8 @@ case class Model(
     * Blds for maven dependencies are ignored.
     */
   val bldConflicts: Map[MoolPath, Set[MoolPath]] = {
-    val indirectBldToRelCfg =
-      for {
-        (relCfgPath, bldPaths) <- relCfgsToBldsTransitive.toVector
-        bldPath <- bldPaths
-      } yield bldPath -> relCfgPath
-
     for {
-      (bldPath, relCfgPaths) <- indirectBldToRelCfg.groupByKeys
+      (bldPath, relCfgPaths) <- bldsToRelCfgsTransitive
       //blds that are directly referenced by a relcfg are not conflicted
       if !relCfgPaths.exists(relCfgPath => relCfgsToBld(relCfgPath).contains(bldPath))
       //blds that are referenced by only one relcfg are not conflicted
@@ -326,12 +271,20 @@ case class Model(
     )
   }
 
+  lazy val bldTree: Vector[StrictTree[MoolPath]] =
+    StrictTree.unfoldForest(blds.toVector.map(bld => (bld, Set.empty[MoolPath]))) {
+      case ((moolPath, bld), history) if history.contains(moolPath) =>
+        (moolPath, Vector.empty)
+      case ((moolPath, bld), history) =>
+        (moolPath, bldsToBlds(moolPath).toVector.map(path => ((path, blds(path)), history + path)))
+    }
+
 }
 
 object Model {
 
   val javaRuleTypes =
-    Set("file_coll", "java_lib", "java_proto_lib", "java_test", "release_package", "scala_lib", "scala_test")
+    Set("file_coll", "java_lib", "java_bin", "java_proto_lib", "java_test", "release_package", "scala_lib", "scala_test")
 
   def ofRepository(
     repo: Path,

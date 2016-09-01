@@ -10,7 +10,7 @@ object MainCopyModels extends App {
 
   val destinationRoot = Files.createTempDirectory(Paths.get("/tmp"), "mool-conversion")
 
-  val models = Models.ofMoolRepository2(moolRoot)
+  val models = Models.ofMoolRepository(moolRoot)
 
   val copies = models.copies(destinationRoot)
 

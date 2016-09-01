@@ -2,13 +2,55 @@ package com.rocketfuel.build.jvmlib
 
 import com.rocketfuel.build.mool
 import java.nio.file.Path
+import scala.xml.Elem
 
 case class Model(
   identifier: Model.Identifier,
   repository: Option[String] = None,
   scalaVersion: Option[String] = None,
   configurations: Map[String, Model.Configuration] = Map.empty
-)
+) {
+
+  def pom: Elem =
+    <project xmlns="http://maven.apache.org/POM/4.0.0"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+      <modelVersion>4.0.0</modelVersion>
+
+      <groupId>{identifier.groupId}</groupId>
+      <artifactId>{identifier.artifactId}</artifactId>
+      <version>{identifier.version}</version>
+
+      <dependencies>
+        {
+          for {
+            (configName, config) <- configurations
+            dependency <- config.dependencies
+          } yield dependency._1.maven
+        }
+      </dependencies>
+
+    </project>
+
+  def sbt: String =
+    s"""name := "${identifier.artifactId}"
+       |
+       |organization := "${identifier.groupId}"
+       |
+       |version := "${identifier.version}"
+       |
+       |libraryDependencies ++= Seq(
+       |${
+      val depStrings = for {
+        (configName, config) <- configurations
+        dependency <- config.dependencies
+      } yield dependency._1.sbt
+      depStrings.mkString(",\n")
+    }
+       |)
+     """.stripMargin
+
+}
 
 object Model {
 
@@ -16,17 +58,27 @@ object Model {
     groupId: String,
     artifactId: String,
     version: String
-  )
+  ) {
+    def maven: Elem =
+      <dependency>
+        <groupId>{groupId}</groupId>
+        <artifactId>{artifactId}</artifactId>
+        <version>{version}</version>
+      </dependency>
+
+    def sbt =
+      s""""$groupId" % "$artifactId" % "$version""""
+  }
 
   object Identifier {
-    val valueOf: PartialFunction[mool.Dependency, Identifier] = {
-        case mool.Dependency.Maven(groupId, artifactId, version) =>
-          Identifier(groupId, artifactId, version)
-      }
+    val valueOf: PartialFunction[mool.Dependency, (Identifier, String)] = {
+      case mool.Dependency.Maven(groupId, artifactId, version) =>
+        Identifier(groupId, artifactId, version) -> "main"
+    }
   }
 
   case class Configuration(
-    dependencies: Set[Identifier] = Set.empty,
+    dependencies: Map[Identifier, String] = Map.empty,
     files: Map[String, Set[Path]] = Map.empty
   )
 
@@ -34,7 +86,7 @@ object Model {
     def valueOf(moolModel: mool.Model, dependencies: Set[mool.Dependency]): Configuration = {
       val deps =
         for {
-          dependency <- dependencies.toVector
+          dependency <- dependencies.toSeq
         } yield {
           dependency match {
             case mool.Dependency.Bld(bldPath) =>
@@ -42,10 +94,10 @@ object Model {
               val files = bld.srcPaths(moolModel, bldPath)
               Left(bld.language -> files.toSet)
             case mool.Dependency.Maven(groupId, artifactId, version) =>
-              Right(Identifier(groupId, artifactId, version))
+              Right(Identifier(groupId, artifactId, version) -> "main")
             case mool.Dependency.RelCfg(moolPath) =>
               val relCfg = moolModel.relCfgs(moolPath)
-              Right(Identifier(relCfg.group_id, relCfg.artifact_id, "0"))
+              Right(Identifier(relCfg.group_id, relCfg.artifact_id, "0") -> "main")
           }
         }
       deps.foldLeft(Configuration()) {
@@ -81,7 +133,7 @@ object Model {
 
     val mainConfiguration =
       Configuration(
-        dependencies = dependencies.collect(Identifier.valueOf),
+        dependencies = dependencies.toVector.collect(Identifier.valueOf).toMap,
         files = Map(bld.language -> sourcePaths.toSet)
       )
 
@@ -105,7 +157,7 @@ object Model {
 
     val testConfiguration =
       Configuration(
-        dependencies = testDependencies.collect(Identifier.valueOf),
+        dependencies = testDependencies.toVector.collect(Identifier.valueOf).toMap,
         files = testSourcePaths.toMap
       )
 
@@ -164,7 +216,7 @@ object Model {
 
       val configuration =
         Configuration(
-          dependencies = dependencies.collect(Identifier.valueOf),
+          dependencies = dependencies.collect(Identifier.valueOf).toMap,
           files = Map(bld.language -> sourcePaths)
         )
 
@@ -215,50 +267,9 @@ object Model {
   }
 
   def dependenciesOfRelCfg(moolModel: mool.Model)(relCfgPath: mool.MoolPath): Set[mool.Dependency] = {
-    val myBlds = moolModel.relCfgsToExclusiveBlds(relCfgPath)
+    val dependencyPaths = moolModel.relCfgsToBldsTransitive(relCfgPath)
 
-    val notMyBldPaths =
-      moolModel.relCfgsToBldsTransitive(relCfgPath) -- myBlds
-
-    //For Blds that don't belong to this RelCfg, get the RelCfgs they belong to.
-    val notMyBldDependencies: Set[mool.Dependency] =
-      for {
-        notMyBldPath <- notMyBldPaths
-        bld = moolModel.blds(notMyBldPath)
-        dependency <- bld.maven_specs match {
-          case Some(mavenSpecs) =>
-            //Maven dependencies will be pulled in transitively.
-            Set.empty[mool.Dependency]
-          case None =>
-            val relCfgs = moolModel.bldsToRelCfgsTransitive(notMyBldPath)
-            if (relCfgs.size > 1)
-              assert(false)
-            Set[mool.Dependency](mool.Dependency.RelCfg(relCfgs.head))
-        }
-      } yield dependency
-
-    myBlds.map(mool.Dependency.Bld) ++
-      notMyBldDependencies
-  }
-
-  def ofDescendState(d: Models.DescendState): Model = {
-    val identifier =
-      Model.Identifier(
-        groupId = d.root.group_id,
-        artifactId = d.root.artifact_id,
-        version = "0"
-      )
-
-    val configurations =
-      Map(
-        "main" -> Model.Configuration.valueOf(d.model, d.dependencies.main),
-        "test" -> Model.Configuration.valueOf(d.model, d.dependencies.test)
-      )
-
-    Model(
-      identifier = identifier,
-      configurations = configurations
-    )
+    dependencyPaths.map(dependencyPath => (dependencyPath, moolModel.blds(dependencyPath))).map((mool.Dependency.ofBld _).tupled)
   }
 
 }
