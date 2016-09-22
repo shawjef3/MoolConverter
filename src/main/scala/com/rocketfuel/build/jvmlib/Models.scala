@@ -2,7 +2,9 @@ package com.rocketfuel.build.jvmlib
 
 import com.rocketfuel.build.{Logger, mool}
 import java.nio.file._
-import scalaz._, Scalaz._
+import scalaz._
+import Scalaz._
+import scala.xml.Elem
 
 case class Models(
   models: Map[mool.MoolPath, Model],
@@ -47,6 +49,59 @@ case class Models(
       kvp <- Map(pom -> model.pom.toString, sbt -> model.sbt)
     } yield kvp
   } toMap
+
+  def aggregatePom: Elem =
+    <project xmlns="http://maven.apache.org/POM/4.0.0"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+      <modelVersion>4.0.0</modelVersion>
+
+      <groupId>com.rocketfuel</groupId>
+      <artifactId>aggregate</artifactId>
+      <version>9.0.0-SNAPSHOT</version>
+      <packaging>pom</packaging>
+
+      <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <jdkName>JDK 1.8</jdkName>
+        <compileSource>1.8</compileSource>
+        <JAVAC>${{env.JAVA_HOME}}/bin/javac</JAVAC>
+        <JAVA>${{env.JAVA_HOME}}/bin/java</JAVA>
+      </properties>
+
+      <modules>
+        {
+          for ((relCfgPath, _) <- models) yield <module>{relCfgPath.last}</module>
+        }
+      </modules>
+    </project>
+
+  val toIdentifier: String => String = {
+    case "" => ""
+    case x =>
+      val head =
+        if (x.head.isUnicodeIdentifierStart) x
+        else '_'
+      val tail = head + x.tail.map {
+        case c if c.isUnicodeIdentifierPart => c
+        case _ => '_'
+      }
+      head + tail
+  }
+
+  def aggregateSbt: String = {
+    val projects =
+      for ((relCfgPath, _) <- models) yield {
+        "lazy val " + toIdentifier(relCfgPath.mkString) + " = project.in(file(" + relCfgPath.mkString(".") + "))" //todo: dependsOn
+      }
+
+    s"""lazy val root =
+       |  project.in(file(".")).aggregate(${models.keys.map(_.mkString).mkString("\n", ",\n    ", "\n  ")})
+       |
+       |${projects.mkString("\n")}
+     """.stripMargin
+  }
 
 }
 

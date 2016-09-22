@@ -168,7 +168,7 @@ object Model {
         Model.Identifier(
           groupId = relCfg.group_id,
           artifactId = relCfg.artifact_id,
-          version = relCfg.base_version
+          version = moolModel.maxVersion.getOrElse(path, relCfg.base_version)
         )
       }
 

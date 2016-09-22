@@ -22,6 +22,11 @@ case class Model(
   bldToTestBldSupplement: Map[MoolPath, Set[MoolPath]]
 ) extends Graphviz {
 
+  val maxVersion: Map[MoolPath, String] =
+    for {
+      (bldPath, bldVersions) <- versions
+    } yield bldPath -> bldVersions.max.version.mkString(".")
+
   /**
     * Given a path to a Bld, get all the paths to Blds that it depends on. Intransitive.
     */
@@ -259,7 +264,7 @@ case class Model(
           RelCfg(
             group_id = bldPath.init.mkString("."),
             artifact_id = bldPath.last,
-            base_version = "0.0",
+            base_version = "0",
             `jar-with-dependencies` = Some(RelCfg.Artifact(target = ("mool" +: bldPath).mkString("."), artifact_path = (bldPath.init :+ bldPath.last + ".jar").mkString("/"))),
             `jar-no-dependencies` = None
           )
@@ -317,18 +322,20 @@ object Model {
         } yield (relCfgPathParts :+ relCfgName) -> relCfg
       }
 
-    val versions =
-      for (versionFile <- versionFiles) yield {
-        val versionsInFile = Version.ofFile(repo.resolve(versionFile))
-        val versionFilePathParts = versionFile.split("/").dropRight(1).toVector
-        versionFilePathParts -> versionsInFile
-      }
+    val versions = {
+      for {
+        versionFile <- versionFiles
+        versionsInFile = Version.ofFile(repo.resolve(versionFile))
+        versionFilePathParts = versionFile.split("/").dropRight(1).toVector
+        (groupId, groupVersions) <- versionsInFile.groupBy(_.groupId)
+      } yield (versionFilePathParts :+ groupId) -> groupVersions
+    }.toMap
 
     Model(
       root = repo,
       blds = blds.foldLeft(Map.empty[MoolPath, Bld])(_ ++ _),
       relCfgs = relCfgs.foldLeft(Map.empty[MoolPath, RelCfg])(_ ++ _),
-      versions = versions.toMap,
+      versions = versions,
       bldToTestBldSupplement
     )
   }
