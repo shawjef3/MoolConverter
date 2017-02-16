@@ -17,7 +17,7 @@ case class Model(
              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <modelVersion>4.0.0</modelVersion>
 
-      <groupId>{identifier.groupId}</groupId>
+      <groupId>{identifier.groupId.split('.').tail.mkString(".")}</groupId>
       <artifactId>{identifier.artifactId}</artifactId>
       <version>{identifier.version}</version>
 
@@ -35,7 +35,7 @@ case class Model(
   def sbt: String =
     s"""name := "${identifier.artifactId}"
        |
-       |organization := "${identifier.groupId}"
+       |organization := "${identifier.groupId.split('.').tail.mkString(".")}"
        |
        |version := "${identifier.version}"
        |

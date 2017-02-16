@@ -79,26 +79,20 @@ case class Models(
     </project>
 
   val toIdentifier: String => String = {
-    case "" => ""
-    case x =>
-      val head =
-        if (x.head.isUnicodeIdentifierStart) x
-        else '_'
-      val tail = head + x.tail.map {
-        case c if c.isUnicodeIdentifierPart => c
-        case _ => '_'
-      }
-      head + tail
+    ident =>
+      if (!ident.head.isUnicodeIdentifierStart || !ident.tail.forall(_.isUnicodeIdentifierPart))
+        "`" + ident + "`"
+      else ident
   }
 
   def aggregateSbt: String = {
     val projects =
       for ((relCfgPath, _) <- models) yield {
-        "lazy val " + toIdentifier(relCfgPath.mkString) + " = project.in(file(" + relCfgPath.mkString(".") + "))" //todo: dependsOn
+        "lazy val " + toIdentifier(relCfgPath.last) + " = project.in(file(\"" + relCfgPath.last + "\"))" //todo: dependsOn
       }
 
     s"""lazy val root =
-       |  project.in(file(".")).aggregate(${models.keys.map(_.mkString).mkString("\n", ",\n    ", "\n  ")})
+       |  project.in(file(".")).aggregate(${models.keys.map(key => toIdentifier(key.last)).mkString("\n", ",\n    ", "\n  ")})
        |
        |${projects.mkString("\n")}
      """.stripMargin

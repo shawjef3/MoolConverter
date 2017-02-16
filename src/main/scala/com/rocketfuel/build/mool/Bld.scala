@@ -89,9 +89,9 @@ object Bld {
         "resources"
       case "java_proto_lib" =>
         "proto"
-      case "java_lib" | "java_test" =>
+      case "java_lib" | "java_test" | "java_bin" =>
         "java"
-      case "scala_lib" | "scala_test" =>
+      case "scala_lib" | "scala_test" | "scala_bin" =>
         "scala"
       case "release_package" =>
         // These projects don't seem to have files, so who cares.
