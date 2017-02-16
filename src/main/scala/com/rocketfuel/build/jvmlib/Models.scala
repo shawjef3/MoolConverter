@@ -8,6 +8,7 @@ import scala.xml.Elem
 
 case class Models(
   models: Map[mool.MoolPath, Model],
+  modelDependencies: Map[mool.MoolPath, Set[mool.MoolPath]],
   moolModel: mool.Model,
   moolRoot: Path
 ) {
@@ -111,8 +112,10 @@ object Models
   def ofMoolRepository(moolRoot: Path): Models = {
     val moolModel = mool.Model.ofRepository(moolRoot, Map.empty).resolveConflicts
     val models = ofMoolRelCfgs(moolModel)
+//    val modelDependencies = dependenciesOfModel(moolModel)
     Models(
       models = models,
+      modelDependencies = Map.empty,
       moolModel = moolModel,
       moolRoot = moolRoot
     )
@@ -127,6 +130,12 @@ object Models
       model <- Model.ofMoolRelCfg(model)(path, relCfg)
     } yield path -> model
   }
+
+//  def dependenciesOfModel(model: mool.Model): Map[mool.MoolPath, Set[mool.MoolPath]] = {
+//    for {
+//      (relCfgPath, relCfg) <- model.relCfgs
+//    }
+//  }
 
   def testBlds(moolModel: mool.Model)(path: mool.MoolPath): Map[mool.MoolPath, mool.Bld] = {
     moolModel.blds.filter(_._2.rule_type.contains("test"))

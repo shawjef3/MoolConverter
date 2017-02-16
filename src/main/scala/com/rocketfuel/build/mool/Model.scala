@@ -289,7 +289,7 @@ case class Model(
 object Model {
 
   val javaRuleTypes =
-    Set("file_coll", "java_lib", "java_bin", "java_proto_lib", "java_test", "release_package", "scala_lib", "scala_test")
+    Set("file_coll", "java_lib", "java_bin", "java_proto_lib", "java_test", "release_package", "scala_lib", "scala_test", "scala_bin")
 
   def ofRepository(
     repo: Path,
