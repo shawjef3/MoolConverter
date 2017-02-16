@@ -2,7 +2,7 @@ package com.rocketfuel.build.jvmlib
 
 import com.rocketfuel.build.mool
 import java.nio.file.Path
-import scala.xml.Elem
+import scala.xml.{Elem, NodeBuffer}
 
 case class Model(
   identifier: Model.Identifier,
@@ -17,34 +17,28 @@ case class Model(
              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <modelVersion>4.0.0</modelVersion>
 
-      <groupId>{identifier.groupId.split('.').tail.mkString(".")}</groupId>
-      <artifactId>{identifier.artifactId}</artifactId>
-      <version>{identifier.version}</version>
+      {identifier.mavenDefinition}
 
       <dependencies>
         {
           for {
             (configName, config) <- configurations
             dependency <- config.dependencies
-          } yield dependency._1.maven
+          } yield dependency._1.mavenDependency
         }
       </dependencies>
 
     </project>
 
   def sbt: String =
-    s"""name := "${identifier.artifactId}"
-       |
-       |organization := "${identifier.groupId.split('.').tail.mkString(".")}"
-       |
-       |version := "${identifier.version}"
+    s"""${identifier.sbtDefinition}
        |
        |libraryDependencies ++= Seq(
        |${
       val depStrings = for {
         (configName, config) <- configurations
         dependency <- config.dependencies
-      } yield dependency._1.sbt
+      } yield dependency._1.sbtDependency
       depStrings.mkString(",\n")
     }
        |)
@@ -59,15 +53,35 @@ object Model {
     artifactId: String,
     version: String
   ) {
-    def maven: Elem =
+    def mavenDependency: Elem =
       <dependency>
         <groupId>{groupId}</groupId>
         <artifactId>{artifactId}</artifactId>
         <version>{version}</version>
       </dependency>
 
-    def sbt =
+    def mavenDefinition: NodeBuffer = {
+      <groupId>
+        {groupId.split('.').tail.mkString(".")}
+      </groupId>
+      <artifactId>
+        {artifactId}
+      </artifactId>
+      <version>
+        {version}
+      </version>
+    }
+
+    def sbtDependency =
       s""""$groupId" % "$artifactId" % "$version""""
+
+    def sbtDefinition =
+     s"""name := "$artifactId"
+        |
+        |organization := "${groupId.split('.').tail.mkString(".")}"
+        |
+        |version := "$version"
+        |"""
   }
 
   object Identifier {
