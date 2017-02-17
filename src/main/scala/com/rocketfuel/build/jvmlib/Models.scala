@@ -18,14 +18,23 @@ case class Models(
       (relCfgPath, model) <- models
       projectRoot = targetPath.resolve(relCfgPath.last)
       (confName, conf) <- model.configurations
-      (srcLanguage, files) <- conf.files
-      file <- files
+      file <- conf.files
     } yield {
       val relative = moolRoot.relativize(file)
       val relativeWithoutJava = relative.subpath(1, relative.getNameCount)
+      val srcLanguage = {
+        file.getFileName.toString.split('.').last match {
+          case language@("proto" | "java" | "scala") =>
+            language
+          case "yml" | "txt" | "json" | "properties" | "ser" =>
+            "resources"
+        }
+      }
 
       val destinationFile =
-        projectRoot.resolve(confName).
+        projectRoot.
+          resolve("src").
+          resolve(confName).
           resolve(srcLanguage).
           resolve(relativeWithoutJava)
 
@@ -47,7 +56,8 @@ case class Models(
       projectRoot = targetPath.resolve(relCfgPath.last)
       pom = projectRoot.resolve("pom.xml")
       sbt = projectRoot.resolve("build.sbt")
-      kvp <- Map(pom -> model.pom.toString, sbt -> model.sbt)
+      buildProperties = projectRoot.resolve("project").resolve("build.properties")
+      kvp <- Map(pom -> model.pom.toString, sbt -> model.buildSbt, buildProperties -> "0.13.13")
     } yield kvp
   } toMap
 
@@ -57,18 +67,12 @@ case class Models(
              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <modelVersion>4.0.0</modelVersion>
 
-      <groupId>com.rocketfuel</groupId>
-      <artifactId>aggregate</artifactId>
-      <version>9.0.0-SNAPSHOT</version>
+      {Models.aggregate}
       <packaging>pom</packaging>
 
       <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <jdkName>JDK 1.8</jdkName>
-        <compileSource>1.8</compileSource>
-        <JAVAC>${{env.JAVA_HOME}}/bin/javac</JAVAC>
-        <JAVA>${{env.JAVA_HOME}}/bin/java</JAVA>
       </properties>
 
       <modules>
@@ -133,6 +137,12 @@ object Models
 
   def testBlds(moolModel: mool.Model)(path: mool.MoolPath): Map[mool.MoolPath, mool.Bld] = {
     moolModel.blds.filter(_._2.rule_type.contains("test"))
+  }
+
+  val aggregate = {
+    <groupId>com.rocketfuel</groupId>
+    <artifactId>aggregate</artifactId>
+    <version>9.0.0-SNAPSHOT</version>
   }
 
 }

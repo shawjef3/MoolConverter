@@ -2,14 +2,14 @@ package com.rocketfuel.build.jvmlib
 
 import java.nio.file._
 
-object MainCopyModels extends App {
+object MainCopySources extends App {
 
-  val dry = true
+  val dry = false
 
   val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
 
-  val destinationRoot = Files.createTempDirectory(Paths.get("/tmp"), "mool-conversion")
-
+//  val destinationRoot = Files.createTempDirectory(Paths.get("/tmp"), "mool-conversion")
+  val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
   val models = Models.ofMoolRepository(moolRoot)
 
   val copies = models.copies(destinationRoot)

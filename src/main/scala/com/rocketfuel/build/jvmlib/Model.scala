@@ -8,6 +8,8 @@ case class Model(
   identifier: Model.Identifier,
   repository: Option[String] = None,
   scalaVersion: Option[String] = None,
+  javaVersion: Option[String] = None,
+  isProto: Boolean,
   configurations: Map[String, Model.Configuration] = Map.empty
 ) {
 
@@ -19,18 +21,78 @@ case class Model(
 
       {identifier.mavenDefinition}
 
+      <parent>
+        {Models.aggregate}
+      </parent>
+
       <dependencies>
         {
           for {
             (configName, config) <- configurations
             dependency <- config.dependencies
-          } yield dependency._1.mavenDependency
+          } yield dependency.mavenDependency(configName)
         }
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.6.1</version>
+            <configuration>
+            {
+            val j = javaVersion.getOrElse("1.8")
+              <source>{j}</source>
+              <target>{j}</target>
+            }
+            </configuration>
+          </plugin>
+          {
+            scalaVersion match {
+              case None =>
+              case Some(v) =>
+                <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                  <artifactId>scala-maven-plugin</artifactId>
+                  <version>3.2.2</version>
+                  <executions>
+                    <execution>
+                      <goals>
+                        <goal>compile</goal>
+                        <goal>testCompile</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+                  <configuration>
+                    <scalaVersion>{v}</scalaVersion>
+                  </configuration>
+                </plugin>
+            }
 
+            if (isProto) {
+              <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.5.0</version>
+                <configuration>
+                  <protocExecutable>/usr/local/bin/protoc</protocExecutable>
+                </configuration>
+                <executions>
+                  <execution>
+                    <goals>
+                      <goal>compile</goal>
+                      <goal>test-compile</goal>
+                    </goals>
+                  </execution>
+                </executions>
+              </plugin>
+            }
+          }
+        </plugins>
+      </build>
     </project>
 
-  def sbt: String =
+  def buildSbt: String =
     s"""${identifier.sbtDefinition}
        |
        |libraryDependencies ++= Seq(
@@ -38,11 +100,21 @@ case class Model(
       val depStrings = for {
         (configName, config) <- configurations
         dependency <- config.dependencies
-      } yield dependency._1.sbtDependency
+      } yield dependency.sbtDependency(configName)
       depStrings.mkString(",\n")
     }
        |)
+       |
+       |${scalaVersion match {case Some(v) => s"scalaVersion := $v" case None => ""}}
+       |
+       |${if (isProto) "sbtprotobuf.ProtobufPlugin.protobufSettings\nunmanagedResourceDirectories in Compile += (sourceDirectory in PB.protobufConfig).value" else ""}
      """.stripMargin
+
+  def pluginsSbt: Option[String] = {
+    if (isProto)
+      Some("""addSbtPlugin("com.github.gseitz" % "sbt-protobuf" % "0.5.4")""")
+    else None
+  }
 
 }
 
@@ -53,80 +125,62 @@ object Model {
     artifactId: String,
     version: String
   ) {
-    def mavenDependency: Elem =
+    def mavenDependency(configName: String): Elem =
       <dependency>
         <groupId>{groupId}</groupId>
         <artifactId>{artifactId}</artifactId>
         <version>{version}</version>
+        <scope>configName</scope>
       </dependency>
 
     def mavenDefinition: NodeBuffer = {
       <groupId>
-        {groupId.split('.').tail.mkString(".")}
+        {groupId.drop("java.".length)}
       </groupId>
       <artifactId>
         {artifactId}
       </artifactId>
       <version>
-        {version}
+        9.0.0-SNAPSHOT
       </version>
     }
 
-    def sbtDependency =
-      s""""$groupId" % "$artifactId" % "$version""""
+    def sbtDependency(configName: String) =
+      s""""$groupId" % "$artifactId" % "$version % "$configName"""""
 
     def sbtDefinition =
      s"""name := "$artifactId"
         |
-        |organization := "${groupId.split('.').tail.mkString(".")}"
+        |organization := "${groupId.drop("java.".length)}"
         |
         |version := "$version"
         |"""
   }
 
   object Identifier {
-    val valueOf: PartialFunction[mool.Dependency, (Identifier, String)] = {
+    val valueOf: PartialFunction[mool.Dependency, Identifier] = {
       case mool.Dependency.Maven(groupId, artifactId, version) =>
-        Identifier(groupId, artifactId, version) -> "main"
+        Identifier(groupId, artifactId, version)
     }
   }
 
   case class Configuration(
-    dependencies: Map[Identifier, String] = Map.empty,
-    files: Map[String, Set[Path]] = Map.empty
+    dependencies: Set[Identifier] = Set.empty,
+    files: Set[Path] = Set.empty
   )
 
   object Configuration {
     def valueOf(moolModel: mool.Model, dependencies: Set[mool.Dependency]): Configuration = {
-      val deps =
-        for {
-          dependency <- dependencies.toSeq
-        } yield {
-          dependency match {
-            case mool.Dependency.Bld(bldPath) =>
-              val bld = moolModel.blds(bldPath)
-              val files = bld.srcPaths(moolModel, bldPath)
-              Left(bld.language -> files.toSet)
-            case mool.Dependency.Maven(groupId, artifactId, version) =>
-              Right(Identifier(groupId, artifactId, version) -> "main")
-            case mool.Dependency.RelCfg(moolPath) =>
-              val relCfg = moolModel.relCfgs(moolPath)
-              Right(Identifier(relCfg.group_id, relCfg.artifact_id, "0") -> "main")
-          }
-        }
-      deps.foldLeft(Configuration()) {
-        case (accum, Left((fileConfig, fileName))) =>
-          accum.files.get(fileConfig) match {
-            case Some(existing) =>
-              val updatedFiles =
-                accum.files + (fileConfig -> (existing ++ fileName))
-              accum.copy(files = updatedFiles)
-            case None =>
-              accum.copy(files = accum.files + (fileConfig -> fileName))
-          }
-
-        case (accum, Right(mvn)) =>
-          accum.copy(dependencies = accum.dependencies + mvn)
+      dependencies.toSeq.foldLeft(Configuration()) {
+        case (accum, mool.Dependency.Bld(bldPath)) =>
+          val bld = moolModel.blds(bldPath)
+          val files = bld.srcPaths(moolModel, bldPath)
+          accum.copy(files = accum.files ++ files)
+        case (accum, mool.Dependency.Maven(groupId, artifactId, version)) =>
+          accum.copy(dependencies = accum.dependencies + Identifier(groupId, artifactId, version))
+        case (accum, mool.Dependency.RelCfg(moolPath)) =>
+          val relCfg = moolModel.relCfgs(moolPath)
+          accum.copy(dependencies = accum.dependencies + Identifier(relCfg.group_id, relCfg.artifact_id, "9.0.0-SNAPSHOT"))
       }
     }
   }
@@ -147,8 +201,8 @@ object Model {
 
     val mainConfiguration =
       Configuration(
-        dependencies = dependencies.toVector.collect(Identifier.valueOf).toMap,
-        files = Map(bld.language -> sourcePaths.toSet)
+        dependencies = dependencies.toVector.collect(Identifier.valueOf).toSet,
+        files = sourcePaths.toSet
       )
 
     val testBldPaths =
@@ -164,15 +218,13 @@ object Model {
       for {
         testBldPath <- testBldPaths
         testBld = moolModel.blds(testBldPath)
-      } yield {
-        val sourcePaths = testBld.srcPaths(moolModel, testBldPath)
-        testBld.language -> sourcePaths.toSet
-      }
+        sourcePath <- testBld.srcPaths(moolModel, testBldPath)
+      } yield sourcePath
 
     val testConfiguration =
       Configuration(
-        dependencies = testDependencies.toVector.collect(Identifier.valueOf).toMap,
-        files = testSourcePaths.toMap
+        dependencies = testDependencies.toVector.collect(Identifier.valueOf).toSet,
+        files = testSourcePaths
       )
 
     val identifier =
@@ -189,6 +241,8 @@ object Model {
     Model(
       identifier = identifier.get,
       scalaVersion = bld.scala_version,
+      javaVersion = bld.java_version,
+      isProto = bld.rule_type == "java_proto_lib",
       repository = bld.maven_specs.map(_.repo_url),
       configurations = Map("main" -> mainConfiguration, "test" -> testConfiguration)
     )
@@ -230,8 +284,8 @@ object Model {
 
       val configuration =
         Configuration(
-          dependencies = dependencies.collect(Identifier.valueOf).toMap,
-          files = Map(bld.language -> sourcePaths)
+          dependencies = dependencies.collect(Identifier.valueOf),
+          files = sourcePaths
         )
 
       val identifier =
@@ -244,6 +298,8 @@ object Model {
       Model(
         identifier = identifier,
         scalaVersion = bld.scala_version,
+        javaVersion = bld.java_version,
+        isProto = bld.rule_type == "java_proto_lib",
         repository = bld.maven_specs.map(_.repo_url),
         configurations = Map("main" -> configuration)
       )

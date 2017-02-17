@@ -10,6 +10,7 @@ case class Bld(
   deps: Option[Vector[String]] = None,
   compileDeps: Option[Vector[String]] = None,
   scala_version: Option[String] = None,
+  java_version: Option[String] = None,
   maven_specs: Option[Bld.MavenSpecs] = None,
   package_modules: Option[Vector[String]] = None,
   package_tests: Option[Vector[String]] = None

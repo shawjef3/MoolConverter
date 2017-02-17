@@ -12,9 +12,9 @@ object MainPrintSources extends App {
   } {
     val modelFiles = for {
       (configurationName, configuration) <- model.configurations
-      (language, languageFiles) <- configuration.files
+      files <- configuration.files
     } yield {
-      configurationName -> languageFiles
+      configurationName -> files
     }
     println(modelPath -> modelFiles)
   }
