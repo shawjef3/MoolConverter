@@ -2,7 +2,7 @@ package com.rocketfuel.build.jvmlib
 
 import com.rocketfuel.build.mool
 import java.nio.file.Path
-import scala.xml.{Elem, NodeBuffer}
+import scala.xml._
 
 case class Model(
   identifier: Model.Identifier,
@@ -29,7 +29,7 @@ case class Model(
         {
           for {
             (configName, config) <- configurations
-            dependency <- config.dependencies
+            dependency <- config.uniqueDependencies
           } yield dependency.mavenDependency(configName)
         }
       </dependencies>
@@ -41,7 +41,7 @@ case class Model(
             <version>3.6.1</version>
             <configuration>
             {
-            val j = javaVersion.getOrElse("1.8")
+              val j = javaVersion.getOrElse("1.8")
               <source>{j}</source>
               <target>{j}</target>
             }
@@ -99,7 +99,7 @@ case class Model(
        |${
       val depStrings = for {
         (configName, config) <- configurations
-        dependency <- config.dependencies
+        dependency <- config.uniqueDependencies
       } yield dependency.sbtDependency(configName)
       depStrings.mkString(",\n")
     }
@@ -107,7 +107,7 @@ case class Model(
        |
        |${scalaVersion match {case Some(v) => s"scalaVersion := $v" case None => ""}}
        |
-       |${if (isProto) "sbtprotobuf.ProtobufPlugin.protobufSettings\nunmanagedResourceDirectories in Compile += (sourceDirectory in PB.protobufConfig).value" else ""}
+       |${if (isProto) "sbtprotobuf.ProtobufPlugin.protobufSettings\nunmanagedResourceDirectories in Compile += (sourceDirectory in sbtprotobuf.ProtobufPlugin.protobufConfig).value" else ""}
      """.stripMargin
 
   def pluginsSbt: Option[String] = {
@@ -130,12 +130,12 @@ object Model {
         <groupId>{groupId}</groupId>
         <artifactId>{artifactId}</artifactId>
         <version>{version}</version>
-        <scope>configName</scope>
+        { if (configName != "main") <scope>{configName}</scope> else NodeSeq.Empty}
       </dependency>
 
     def mavenDefinition: NodeBuffer = {
       <groupId>
-        {groupId.drop("java.".length)}
+        {groupId.drop("java.".length - 1)}
       </groupId>
       <artifactId>
         {artifactId}
@@ -146,12 +146,12 @@ object Model {
     }
 
     def sbtDependency(configName: String) =
-      s""""$groupId" % "$artifactId" % "$version % "$configName"""""
+      s""""$groupId" % "$artifactId" % "$version${if (configName != "main") s""" % "$configName"""" else ""}"""
 
     def sbtDefinition =
      s"""name := "$artifactId"
         |
-        |organization := "${groupId.drop("java.".length)}"
+        |organization := "${groupId.drop("java.".length - 1)}"
         |
         |version := "$version"
         |"""
@@ -167,7 +167,15 @@ object Model {
   case class Configuration(
     dependencies: Set[Identifier] = Set.empty,
     files: Set[Path] = Set.empty
-  )
+  ) {
+    def uniqueDependencies: Set[Identifier] = {
+      for {
+        (groupAndArtifact, groupAndArtifcatIds) <- dependencies.groupBy(d => (d.groupId, d.artifactId))
+      } yield {
+        groupAndArtifcatIds.maxBy(_.version)
+      }
+    }.toSet
+  }
 
   object Configuration {
     def valueOf(moolModel: mool.Model, dependencies: Set[mool.Dependency]): Configuration = {
@@ -266,7 +274,6 @@ object Model {
     relCfg: mool.RelCfg
   ): Option[Model] = {
     for {
-      withDeps <- relCfg.`jar-with-dependencies`
       bldPath <- moolModel.relCfgsToBld(path)
     } yield {
       val bld = moolModel.blds(bldPath)
@@ -288,6 +295,24 @@ object Model {
           files = sourcePaths
         )
 
+      val testDependencies =
+        testDependenciesOfRelCfg(moolModel)(path)
+
+      val testSourcePaths =
+        testDependencies.flatMap {
+          case mool.Dependency.Bld(dependencyPath) =>
+            val bld = moolModel.blds(dependencyPath)
+            bld.srcPaths(moolModel, dependencyPath)
+          case _ =>
+            Vector.empty
+        }
+
+      val testConfiguration =
+        Configuration(
+          dependencies = testDependencies.collect(Identifier.valueOf),
+          files = testSourcePaths
+        )
+
       val identifier =
         Model.Identifier(
           groupId = relCfg.group_id,
@@ -301,7 +326,7 @@ object Model {
         javaVersion = bld.java_version,
         isProto = bld.rule_type == "java_proto_lib",
         repository = bld.maven_specs.map(_.repo_url),
-        configurations = Map("main" -> configuration)
+        configurations = Map("main" -> configuration, "test" -> testConfiguration)
       )
     }
   }
@@ -340,6 +365,17 @@ object Model {
     val dependencyPaths = moolModel.relCfgsToBldsTransitive(relCfgPath)
 
     dependencyPaths.map(dependencyPath => (dependencyPath, moolModel.blds(dependencyPath))).map((mool.Dependency.ofBld _).tupled)
+  }
+
+  def testDependenciesOfRelCfg(moolModel: mool.Model)(relCfgPath: mool.MoolPath): Set[mool.Dependency] = {
+    val dependencyPaths = moolModel.relCfgsToBldsTransitive(relCfgPath)
+    val testDependencyPaths =
+      for {
+        dependencyPath <- dependencyPaths
+        testDependencyPath <- moolModel.bldsToTestBlds(dependencyPath)
+      } yield testDependencyPath
+
+    testDependencyPaths.map(dependencyPath => (dependencyPath, moolModel.blds(dependencyPath))).map((mool.Dependency.ofBld _).tupled)
   }
 
 }

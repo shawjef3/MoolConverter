@@ -22,6 +22,9 @@ case class Model(
   bldToTestBldSupplement: Map[MoolPath, Set[MoolPath]]
 ) extends Graphviz {
 
+  def spanningTrees: Vector[StrictTree[MoolPath]] =
+    ???
+
   val maxVersion: Map[MoolPath, String] =
     for {
       (bldPath, bldVersions) <- versions
@@ -186,12 +189,12 @@ case class Model(
   val relCfgToTestBlds: Map[MoolPath, Set[MoolPath]] = {
     val toReduce =
       for {
-        (testBldPath, testBld) <- testBlds.toSeq
-        bldDepPath <- testBld.depPaths(testBldPath)
-        relCfgPath <- bldsToRelCfgsTransitive(bldDepPath)
-      } yield relCfgPath -> testBldPath
+        (relCfgPath, maybeBld) <- relCfgsToBld
+        bld <- maybeBld.toSeq
+        testBld <- bldsToTestBlds(bld).toSeq
+      } yield relCfgPath -> testBld
 
-    toReduce.groupByKeys.withDefaultValue(Set.empty)
+    toReduce.groupByKeys
   }
 
   val testBldsToRelCfgs: Map[MoolPath, Set[MoolPath]] = {

@@ -16,14 +16,14 @@ case class Models(
   def copies(targetPath: Path): Map[Path, Path] = {
     for {
       (relCfgPath, model) <- models
-      projectRoot = targetPath.resolve(relCfgPath.last)
+      projectRoot = targetPath.resolve(moolModel.relCfgs(relCfgPath).artifact_id)
       (confName, conf) <- model.configurations
       file <- conf.files
     } yield {
       val relative = moolRoot.relativize(file)
       val relativeWithoutJava = relative.subpath(1, relative.getNameCount)
       val srcLanguage = {
-        file.getFileName.toString.split('.').last match {
+        file.toString.split('.').last match {
           case language@("proto" | "java" | "scala") =>
             language
           case "yml" | "txt" | "json" | "properties" | "ser" =>
@@ -77,7 +77,10 @@ case class Models(
 
       <modules>
         {
-          for ((relCfgPath, _) <- models) yield <module>{relCfgPath.last}</module>
+          val modules = {
+            for {(relCfgPath, _) <- models} yield moolModel.relCfgs(relCfgPath).artifact_id
+          }.toSet
+          for (module <- modules) yield <module>{module}</module>
         }
       </modules>
     </project>
@@ -90,13 +93,17 @@ case class Models(
   }
 
   def aggregateSbt: String = {
+    val projectNames = {
+      for {(relCfgPath, _) <- models} yield moolModel.relCfgs(relCfgPath).artifact_id
+    }.toSet
+
     val projects =
-      for ((relCfgPath, _) <- models) yield {
-        "lazy val " + toIdentifier(relCfgPath.last) + " = project.in(file(\"" + relCfgPath.last + "\"))" //todo: dependsOn
+      for (projectName <- projectNames) yield {
+        "lazy val " + toIdentifier(projectName) + " = project.in(file(\"" + projectName + "\"))" //todo: dependsOn
       }
 
     s"""lazy val root =
-       |  project.in(file(".")).aggregate(${models.keys.map(key => toIdentifier(key.last)).mkString("\n", ",\n    ", "\n  ")})
+       |  project.in(file(".")).aggregate(${projectNames.map(key => toIdentifier(key)).mkString("\n", ",\n    ", "\n  ")})
        |
        |${projects.mkString("\n")}
      """.stripMargin
