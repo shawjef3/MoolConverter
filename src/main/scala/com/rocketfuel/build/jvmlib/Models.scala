@@ -15,8 +15,8 @@ case class Models(
 
   def copies(targetPath: Path): Map[Path, Path] = {
     for {
-      (relCfgPath, model) <- models
-      projectRoot = targetPath.resolve(moolModel.relCfgs(relCfgPath).artifact_id)
+      (_, model) <- models
+      projectRoot = targetPath.resolve(model.identifier.artifactId)
       (confName, conf) <- model.configurations
       file <- conf.files
     } yield {
@@ -26,7 +26,7 @@ case class Models(
         file.toString.split('.').last match {
           case language@("proto" | "java" | "scala") =>
             language
-          case "yml" | "txt" | "json" | "properties" | "ser" =>
+          case otherwise =>
             "resources"
         }
       }
@@ -77,10 +77,8 @@ case class Models(
 
       <modules>
         {
-          val modules = {
-            for {(relCfgPath, _) <- models} yield moolModel.relCfgs(relCfgPath).artifact_id
-          }.toSet
-          for (module <- modules) yield <module>{module}</module>
+          for {(_, model) <- models} yield
+            <module>{model.identifier.artifactId}</module>
         }
       </modules>
     </project>
@@ -98,8 +96,15 @@ case class Models(
     }.toSet
 
     val projects =
-      for (projectName <- projectNames) yield {
-        "lazy val " + toIdentifier(projectName) + " = project.in(file(\"" + projectName + "\"))" //todo: dependsOn
+      for {
+        (relCfgPath, model) <- models
+      } yield {
+        val projectName = moolModel.relCfgs(relCfgPath).artifact_id
+        val dependencies = {
+          for (d <- modelDependencies(relCfgPath)) yield toIdentifier(moolModel.relCfgs(d).artifact_id)
+        }.mkString(",")
+
+        s"""lazy val ${toIdentifier(projectName)} = project.in(file(" + $projectName")).dependsOn($dependencies)"""
       }
 
     s"""lazy val root =
@@ -114,10 +119,20 @@ case class Models(
 object Models
   extends Logger {
 
-  def ofMoolRepository(moolRoot: Path): Models = {
+  def ofMoolRepositoryByRelCfg(moolRoot: Path): Models = {
     val moolModel = mool.Model.ofRepository(moolRoot, Map.empty).resolveConflicts
     val models = ofMoolRelCfgs(moolModel)
-//    val modelDependencies = dependenciesOfModel(moolModel)
+    Models(
+      models = models,
+      modelDependencies = Map.empty,
+      moolModel = moolModel,
+      moolRoot = moolRoot
+    )
+  }
+
+  def ofMoolRepositoryByBLD(moolRoot: Path): Models = {
+    val moolModel = mool.Model.ofRepository(moolRoot, Map.empty).resolveConflicts
+    val models = ofMoolBlds(moolModel)
     Models(
       models = models,
       modelDependencies = Map.empty,
@@ -136,11 +151,17 @@ object Models
     } yield path -> model
   }
 
-//  def dependenciesOfModel(model: mool.Model): Map[mool.MoolPath, Set[mool.MoolPath]] = {
-//    for {
-//      (relCfgPath, relCfg) <- model.relCfgs
-//    }
-//  }
+  /**
+    * Create a Model for each BLD.
+    */
+  def ofMoolBlds(model: mool.Model): Map[mool.MoolPath, Model] = {
+    for {
+      (path, bld) <- model.blds
+    } yield {
+      val bldModel = Model.ofMoolBld(model)(path, bld)
+      path -> bldModel
+    }
+  }
 
   def testBlds(moolModel: mool.Model)(path: mool.MoolPath): Map[mool.MoolPath, mool.Bld] = {
     moolModel.blds.filter(_._2.rule_type.contains("test"))

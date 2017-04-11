@@ -4,13 +4,18 @@ import java.nio.file.{Files, Paths}
 
 object MainCreateProjectFiles extends App {
 
+  val byBld = args.headOption.contains("BLD")
+
   val dry = false
 
   val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
 
 //  val destinationRoot = Files.createTempDirectory(Paths.get("/tmp"), "mool-conversion")
 val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
-  val models = Models.ofMoolRepository(moolRoot)
+  val models =
+    if (byBld)
+      Models.ofMoolRepositoryByBLD(moolRoot)
+    else Models.ofMoolRepositoryByRelCfg(moolRoot)
 
   val rootProjectFiles =
     Map(

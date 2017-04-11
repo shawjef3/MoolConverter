@@ -27,6 +27,12 @@
     "deps": [".1"]
 },
 
+"2Test": {
+    "rule_type": "java_lib",
+    "srcs": ["20Test.java"],
+    "deps": [".2", ".0"]
+},
+
 "CommonsCollections": {
     "rule_type": "java_lib",
     "maven_specs": {

@@ -21,7 +21,7 @@ case class Graph(
   def toDot: String = {
     val sb = new StringBuilder()
 
-    sb.append("digraph mool {\n  rankdir=LR\n  node [fontname = \"Liberation Mono:style=Regular\"]\n")
+    sb.append(Graph.start)
 
     for (node <- nodes) {
       node.toDot(1, sb)
@@ -31,7 +31,7 @@ case class Graph(
 
     edges.foreach(_.toDot(1, sb))
 
-    sb.append('}')
+    sb.append(Graph.end)
 
     sb.toString
   }
@@ -42,6 +42,12 @@ case class Graph(
     try out.write(toDot)
     finally out.close()
   }
+}
+
+object Graph {
+  val start = "digraph mool {\n  rankdir=LR\n  node [fontname = \"Liberation Mono:style=Regular\"]\n"
+
+  val end = '}'
 }
 
 case class Cluster(

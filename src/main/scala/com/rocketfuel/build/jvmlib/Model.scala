@@ -207,52 +207,30 @@ object Model {
     val sourcePaths =
       bld.srcPaths(moolModel, path)
 
-    val mainConfiguration =
+    val configuration =
       Configuration(
         dependencies = dependencies.toVector.collect(Identifier.valueOf).toSet,
         files = sourcePaths.toSet
       )
 
-    val testBldPaths =
-      moolModel.bldsToTestBlds(path)
-
-    val testDependencies =
-      for {
-        testBldPath <- testBldPaths
-        dependency <- dependenciesOfBld(moolModel)(testBldPath)
-      } yield dependency
-
-    val testSourcePaths =
-      for {
-        testBldPath <- testBldPaths
-        testBld = moolModel.blds(testBldPath)
-        sourcePath <- testBld.srcPaths(moolModel, testBldPath)
-      } yield sourcePath
-
-    val testConfiguration =
-      Configuration(
-        dependencies = testDependencies.toVector.collect(Identifier.valueOf).toSet,
-        files = testSourcePaths
+    //We might have to make up the identifier.
+    val identifier =
+      Model.Identifier(
+        groupId = path.mkString("."),
+        artifactId = path.mkString("."),
+        version = moolModel.maxVersion.getOrElse(path, "0.0")
       )
 
-    val identifier =
-      for {
-        relCfg <- moolModel.relCfgs.get(path)
-      } yield {
-        Model.Identifier(
-          groupId = relCfg.group_id,
-          artifactId = relCfg.artifact_id,
-          version = moolModel.maxVersion.getOrElse(path, relCfg.base_version)
-        )
-      }
+    val configurationName =
+      if (bld.rule_type.contains("test")) "test" else "main"
 
     Model(
-      identifier = identifier.get,
+      identifier = identifier,
       scalaVersion = bld.scala_version,
       javaVersion = bld.java_version,
       isProto = bld.rule_type == "java_proto_lib",
       repository = bld.maven_specs.map(_.repo_url),
-      configurations = Map("main" -> mainConfiguration, "test" -> testConfiguration)
+      configurations = Map(configurationName -> configuration)
     )
   }
 

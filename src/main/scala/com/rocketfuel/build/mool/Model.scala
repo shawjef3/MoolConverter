@@ -30,6 +30,17 @@ case class Model(
       (bldPath, bldVersions) <- versions
     } yield bldPath -> bldVersions.max.version.mkString(".")
 
+  val srcsToBlds: Map[MoolPath, Set[MoolPath]] = {
+    val srcToBld =
+      for {
+        (bldPath, bld) <- blds
+        sources = bld.srcs.getOrElse(Vector.empty)
+        source <- sources
+      } yield (bldPath :+ source) -> bldPath
+
+    srcToBld.groupByKeys
+  }
+
   /**
     * Given a path to a Bld, get all the paths to Blds that it depends on. Intransitive.
     */
@@ -123,6 +134,12 @@ case class Model(
         } yield relCfgPath
       bldPath -> bldRelCfgs.toSet
     }
+  }
+
+  val srcsToRelCfgs: Map[MoolPath, Set[MoolPath]] = {
+    for {
+      (srcPath, bldPaths) <- srcsToBlds
+    } yield srcPath -> bldPaths.flatMap(bldsToRelCfgs)
   }
 
   /**
@@ -292,7 +309,7 @@ case class Model(
 object Model {
 
   val javaRuleTypes =
-    Set("file_coll", "java_lib", "java_bin", "java_proto_lib", "java_test", "release_package", "scala_lib", "scala_test", "scala_bin")
+    Set("file_coll", "java_lib", "java_bin", "java_proto_lib", "java_thrift_lib", "java_test", "release_package", "scala_lib", "scala_test", "scala_bin")
 
   def ofRepository(
     repo: Path,

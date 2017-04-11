@@ -23,7 +23,7 @@ case class Bld(
     srcPaths(model.root, bldPath)
 
   def srcPaths(root: Path, bldPath: MoolPath): Vector[Path] = {
-    val bldDir = bldPath.dropRight(1).foldLeft(root)(_.resolve(_))
+    val bldDir = bldPath.foldLeft(root)(_.resolve(_))
     for {
       src <- srcs.getOrElse(Vector.empty)
     } yield bldDir.resolve(src)

@@ -8,6 +8,7 @@ class ModelSpec extends FunSuite {
   val bld00StringPath = "mool.java.0.0"
   val bld01StringPath = "mool.java.0.1"
   val bld02StringPath = "mool.java.0.2"
+  val bld02TestStringPath = "mool.java.0.2Test"
   val bld10StringPath = "mool.java.1.0"
   val bldOrphanStringPath = "mool.java.orphan"
   val bldConflictStringPath = "mool.java.conflict"
@@ -15,6 +16,7 @@ class ModelSpec extends FunSuite {
   val bld00Path = Bld.absolutePath(bld00StringPath)
   val bld01Path = Bld.absolutePath(bld01StringPath)
   val bld02Path = Bld.absolutePath(bld02StringPath)
+  val bld02TestPath = Bld.absolutePath(bld02TestStringPath)
   val bld10Path = Bld.absolutePath(bld10StringPath)
   val bldOrphanPath = Bld.absolutePath(bldOrphanStringPath)
   val bldConflictPath = Bld.absolutePath(bldConflictStringPath)
@@ -25,6 +27,7 @@ class ModelSpec extends FunSuite {
   val bld00 = Bld(rule_type = "java_lib", srcs = Some(Vector("0.src")), deps = Some(Vector(bld01StringPath, bldConflictStringPath)))
   val bld01 = Bld(rule_type = "java_lib", deps = Some(Vector(bld02StringPath)))
   val bld02 = Bld(rule_type = "java_lib")
+  val bld02Test = Bld(rule_type = "java_test", srcs = Some(Vector("0Test.src")), deps = Some(Vector(bld02StringPath, bld00StringPath)))
   val bld10 = Bld(rule_type = "java_lib", deps = Some(Vector(bldConflictStringPath)))
   val bldOrphan = bld02
   val bldConflict = bldOrphan
@@ -34,6 +37,7 @@ class ModelSpec extends FunSuite {
       bld00Path -> bld00,
       bld01Path -> bld01,
       bld02Path -> bld02,
+      bld02TestPath -> bld02Test,
       bldConflictPath -> bldConflict
     )
 
