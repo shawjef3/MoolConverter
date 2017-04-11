@@ -1,6 +1,5 @@
-package com.rocketfuel.build.mool.json
+package com.rocketfuel.build.mool
 
-import com.rocketfuel.build.mool._
 import java.nio.file.Paths
 import org.scalatest.FunSuite
 

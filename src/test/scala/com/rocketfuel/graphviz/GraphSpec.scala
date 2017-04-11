@@ -8,18 +8,14 @@ class GraphSpec extends FunSuite {
     val g = Graph(Set.empty, Set.empty, Set.empty)
     val dot = g.toDot
 
-    assertResult("digraph mool {\n}")(dot)
+    assertResult(Graph.start + Graph.end)(dot)
   }
 
   test("one edge") {
     val g = Graph(Set.empty, Set.empty, Set(Edge("hi", "bye", None)))
     val dot = g.toDot
 
-    assertResult(
-      """digraph mool {
-        |  hi -> bye
-        |}""".stripMargin
-    )(dot)
+    assertResult(Graph.start + "  \"hi\" -> \"bye\"\n" + Graph.end)(dot)
   }
 
   test("one cluster") {
@@ -27,9 +23,8 @@ class GraphSpec extends FunSuite {
     val dot = g.toDot
 
     assertResult(
-      """digraph mool {
-        |  subgraph cluster_name {
-        |    hi -> bye
+      s"""${Graph.start}  subgraph "cluster_name" {
+        |    "hi" -> "bye"
         |  }
         |}""".stripMargin
     )(dot)
@@ -40,17 +35,16 @@ class GraphSpec extends FunSuite {
     val dot = g.toDot
 
     assertResult(
-      """digraph mool {
-        |  subgraph cluster_name {
-        |    hi -> bye
+      s"""${Graph.start}  subgraph "cluster_name" {
+        |    "hi" -> "bye"
         |  }
-        |  a -> b
+        |  "a" -> "b"
         |}""".stripMargin
     )(dot)
   }
 
   test("quoting and escaping") {
-    assertResult("hi")("hi".dotQuote)
+    assertResult("\"hi\"")("hi".dotQuote)
     assertResult("\"\\\"\"")("\"".dotQuote)
   }
 

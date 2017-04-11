@@ -1,6 +1,5 @@
-package com.rocketfuel.build.mool.json
+package com.rocketfuel.build.mool
 
-import com.rocketfuel.build.mool.RelCfg
 import org.scalatest.FunSuite
 import scalaz.Scalaz._
 
