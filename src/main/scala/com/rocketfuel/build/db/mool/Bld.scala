@@ -23,7 +23,7 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
   override val selectByIdSql: CompiledStatement = "SELECT * FROM blds WHERE id = @id"
 
   override def deploy()(implicit connection: Connection): Unit =
-    Ignore(
+    Ignore.ignore(
       """CREATE TABLE blds (
         |  id serial PRIMARY KEY,
         |  path text NOT NULL UNIQUE,
@@ -36,10 +36,10 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         |  repo_url text
         |)
         |""".stripMargin
-    ).ignore()
+    )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore("DROP TABLE IF EXISTS blds").ignore()
+    Ignore.ignore("DROP TABLE IF EXISTS blds")
 
   override val insertSql: CompiledStatement =
     """INSERT INTO blds (

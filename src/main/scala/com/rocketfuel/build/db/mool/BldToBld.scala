@@ -6,16 +6,16 @@ import com.rocketfuel.sdbc.PostgreSql._
 /**
   * A mapping from a bld to many blds.
   */
-case class BldToDep(
+case class BldToBld(
   id: Int,
-  source: Int,
-  target: Int,
+  sourceId: Int,
+  targetId: Int,
   isCompile: Boolean
 )
 
-object BldToDep extends Deployable with InsertableToValue[BldToDep] with SelectableById[BldToDep] {
+object BldToBld extends Deployable with InsertableToValue[BldToBld] with SelectableById[BldToBld] {
   override def deploy()(implicit connection: Connection): Unit =
-    Ignore(
+    Ignore.ignore(
       """CREATE TABLE bld_to_bld (
         |  id serial PRIMARY KEY,
         |  source_id int NOT NULL,
@@ -24,13 +24,13 @@ object BldToDep extends Deployable with InsertableToValue[BldToDep] with Selecta
         |  UNIQUE(source_id, target_id)
         |)
       """.stripMargin
-    ).ignore()
+    )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore("DROP TABLE IF EXISTS bld_to_bld").ignore()
+    Ignore.ignore("DROP TABLE IF EXISTS bld_to_bld")
 
   override val insertSql: CompiledStatement =
-    """INSERT INTO bld_to_bld (source, target, is_compile) VALUES (@source, @target, @isCompile)"""
+    """INSERT INTO bld_to_bld (source_id, target_id, is_compile) VALUES (@sourceId, @targetId, @isCompile) RETURNING id"""
 
   override val selectByIdSql: CompiledStatement =
     """SELECT * FROM bld_to_bld WHERE id = @id"""

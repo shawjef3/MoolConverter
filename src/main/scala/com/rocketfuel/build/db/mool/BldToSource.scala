@@ -11,7 +11,7 @@ case class BldToSource(
 
 object BldToSource extends Deployable with InsertableToValue[BldToSource] with SelectableById[BldToSource] {
   override def deploy()(implicit connection: Connection): Unit =
-    Ignore(
+    Ignore.ignore(
       """CREATE TABLE bld_to_sources (
       |  id serial PRIMARY KEY,
       |  bld_id int NOT NULL,
@@ -19,10 +19,10 @@ object BldToSource extends Deployable with InsertableToValue[BldToSource] with S
       |  UNIQUE(bld_id, source_id)
       |)
       |""".stripMargin
-    ).ignore()
+    )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore("DROP TABLE IF EXISTS bld_to_sources").ignore()
+    Ignore.ignore("DROP TABLE IF EXISTS bld_to_sources")
 
   override val insertSql: CompiledStatement =
     """INSERT INTO bld_to_sources (

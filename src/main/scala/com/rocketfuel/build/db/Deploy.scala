@@ -5,7 +5,17 @@ import com.rocketfuel.sdbc.PostgreSql
 
 object Deploy extends Deployable {
   val deploy: Deployable =
-    Seq(Bld, BldToDep, Source, BldToSource, RelCfg).fold(Deployable.empty)(_ + _)
+    Seq(
+      Bld,
+      BldToBld,
+      Source,
+      BldToSource,
+      RelCfg,
+      RelCfgToBld,
+      SourceToBld,
+      SourceConflicts,
+      TestBlds
+    ).fold(Deployable.empty)(_ + _)
 
   override def deploy()(implicit connection: PostgreSql.Connection): Unit =
     deploy.deploy()

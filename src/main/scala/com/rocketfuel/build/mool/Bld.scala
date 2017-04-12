@@ -31,7 +31,7 @@ case class Bld(
 
   def depPaths(bldPath: MoolPath): Vector[MoolPath] =
     for {
-      dep <- deps.toVector.flatten
+      dep <- deps.getOrElse(Vector.empty)
     } yield Bld.relativePath(bldPath, dep)
 
   def compileDepPaths(bldPath: MoolPath): Vector[MoolPath] =

@@ -1,9 +1,7 @@
 package com.rocketfuel.build.mool
 
 import com.rocketfuel.build.GroupByKeys._
-import com.rocketfuel.sdbc.PostgreSql._
 import java.nio.file._
-import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable
 import scalaz.StrictTree
 
@@ -338,8 +336,6 @@ object Model {
         val relCfgPathParts = relCfgFile.split("/").dropRight(1).toVector
         for {
           (relCfgName, relCfg) <- relCfgs
-          //filter out non-java RelCfgs.
-//          if relCfg.`jar-with-dependencies`.nonEmpty
         } yield (relCfgPathParts :+ relCfgName) -> relCfg
       }
 
@@ -362,24 +358,15 @@ object Model {
   }
 
   def findFiles(root: Path, name: String): Vector[String] = {
-    val files =
-      mutable.Buffer.empty[String]
+    val files = mutable.Buffer.empty[String]
 
-    val visitor =
-      new SimpleFileVisitor[Path] {
-        override def visitFile(
-          file: Path,
-          attrs: BasicFileAttributes
-        ): FileVisitResult = {
-          if (file.getFileName.toString == name) {
-            val relativePath = root.relativize(file).toString
-            files.append(relativePath)
-          }
-          FileVisitResult.CONTINUE
-        }
+    Files.walk(root).forEach { p =>
+      if (p.getFileName.toString == name) {
+        val relativePath = root.relativize(p).toString
+        files += relativePath
       }
+    }
 
-    Files.walkFileTree(root, visitor)
     files.toVector
   }
 

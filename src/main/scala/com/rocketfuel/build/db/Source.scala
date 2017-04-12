@@ -12,14 +12,14 @@ object Source extends Deployable with InsertableToValue[Source] {
     """INSERT INTO sources (path) values (@path)"""
 
   override def deploy()(implicit connection: Connection): Unit =
-    Ignore(
+    Ignore.ignore(
       """CREATE TABLE sources(
         |  id serial PRIMARY KEY,
         |  path text UNIQUE
         |)
       """.stripMargin
-    ).ignore()
+    )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore("DROP TABLE sources").ignore()
+    Ignore.ignore("DROP TABLE sources")
 }
