@@ -1,6 +1,7 @@
 package com.rocketfuel.build.mool
 
 import com.rocketfuel.build.GroupByKeys._
+import com.rocketfuel.sdbc.PostgreSql._
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable
@@ -338,7 +339,7 @@ object Model {
         for {
           (relCfgName, relCfg) <- relCfgs
           //filter out non-java RelCfgs.
-          if relCfg.`jar-with-dependencies`.nonEmpty
+//          if relCfg.`jar-with-dependencies`.nonEmpty
         } yield (relCfgPathParts :+ relCfgName) -> relCfg
       }
 

@@ -86,7 +86,7 @@ object Bld {
 
   def language(ruleType: String): String =
     ruleType match {
-      case "file_coll" =>
+      case "release_package" | "file_coll" =>
         "resources"
       case "java_proto_lib" =>
         "proto"
@@ -94,9 +94,6 @@ object Bld {
         "java"
       case "scala_lib" | "scala_test" | "scala_bin" =>
         "scala"
-      case "release_package" =>
-        // These projects don't seem to have files, so who cares.
-        ""
     }
 
   case class MavenSpecs(
