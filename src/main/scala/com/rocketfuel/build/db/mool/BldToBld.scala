@@ -16,7 +16,7 @@ case class BldToBld(
 object BldToBld extends Deployable with InsertableToValue[BldToBld] with SelectableById[BldToBld] {
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
-      """CREATE TABLE bld_to_bld (
+      """CREATE TABLE mool.bld_to_bld (
         |  id serial PRIMARY KEY,
         |  source_id int NOT NULL,
         |  target_id int NOT NULL,
@@ -27,7 +27,7 @@ object BldToBld extends Deployable with InsertableToValue[BldToBld] with Selecta
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("DROP TABLE IF EXISTS bld_to_bld")
+    Ignore.ignore("DROP TABLE IF EXISTS mool.bld_to_bld")
 
   override val insertSql: CompiledStatement =
     """INSERT INTO bld_to_bld (source_id, target_id, is_compile) VALUES (@sourceId, @targetId, @isCompile) RETURNING id"""

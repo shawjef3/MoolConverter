@@ -120,7 +120,7 @@ object Models
   extends Logger {
 
   def ofMoolRepositoryByRelCfg(moolRoot: Path): Models = {
-    val moolModel = mool.Model.ofRepository(moolRoot, Map.empty).resolveConflicts
+    val moolModel = mool.Model.ofRepository(moolRoot).resolveConflicts
     val models = ofMoolRelCfgs(moolModel)
     Models(
       models = models,
@@ -131,7 +131,7 @@ object Models
   }
 
   def ofMoolRepositoryByBLD(moolRoot: Path): Models = {
-    val moolModel = mool.Model.ofRepository(moolRoot, Map.empty).resolveConflicts
+    val moolModel = mool.Model.ofRepository(moolRoot)
     val models = ofMoolBlds(moolModel)
     Models(
       models = models,

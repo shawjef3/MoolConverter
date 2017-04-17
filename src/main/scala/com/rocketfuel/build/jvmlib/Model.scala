@@ -159,13 +159,14 @@ object Model {
 
   object Identifier {
     val valueOf: PartialFunction[mool.Dependency, Identifier] = {
-      case mool.Dependency.Maven(groupId, artifactId, version) =>
+      case mool.Dependency.Maven(groupId, artifactId, version, scope) =>
         Identifier(groupId, artifactId, version)
     }
   }
 
   case class Configuration(
     dependencies: Set[Identifier] = Set.empty,
+    internalDependencies: Set[Identifier] = Set.empty, //for maven inter-module dependencies
     files: Set[Path] = Set.empty
   ) {
     def uniqueDependencies: Set[Identifier] = {
@@ -184,7 +185,7 @@ object Model {
           val bld = moolModel.blds(bldPath)
           val files = bld.srcPaths(moolModel, bldPath)
           accum.copy(files = accum.files ++ files)
-        case (accum, mool.Dependency.Maven(groupId, artifactId, version)) =>
+        case (accum, mool.Dependency.Maven(groupId, artifactId, version, scope)) =>
           accum.copy(dependencies = accum.dependencies + Identifier(groupId, artifactId, version))
         case (accum, mool.Dependency.RelCfg(moolPath)) =>
           val relCfg = moolModel.relCfgs(moolPath)

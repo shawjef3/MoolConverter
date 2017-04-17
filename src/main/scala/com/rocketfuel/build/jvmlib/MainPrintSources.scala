@@ -5,7 +5,7 @@ import java.nio.file._
 
 object MainPrintSources extends App {
 
-  val moolModel = mool.Model.ofRepository(Paths.get(System.getProperty("user.home")).resolve("git/data/vostok"), Map.empty)
+  val moolModel = mool.Model.ofRepository(Paths.get(System.getProperty("user.home")).resolve("git/data/vostok"))
 
   for {
     (modelPath, model) <- Model.ofMoolBlds(moolModel)

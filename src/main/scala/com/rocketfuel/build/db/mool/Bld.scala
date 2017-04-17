@@ -6,7 +6,7 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 case class Bld(
   id: Int,
-  path: String,
+  path: Seq[String],
   ruleType: String,
   scalaVersion: Option[String] = None,
   javaVersion: Option[String] = None,
@@ -24,9 +24,9 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
 
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
-      """CREATE TABLE blds (
+      """CREATE TABLE mool.blds (
         |  id serial PRIMARY KEY,
-        |  path text NOT NULL UNIQUE,
+        |  path text[] NOT NULL UNIQUE,
         |  rule_type text NOT NULL,
         |  scala_version text,
         |  java_version text,
@@ -39,10 +39,10 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("DROP TABLE IF EXISTS blds")
+    Ignore.ignore("DROP TABLE IF EXISTS mool.blds CASCADE")
 
   override val insertSql: CompiledStatement =
-    """INSERT INTO blds (
+    """INSERT INTO mool.blds (
       |  path,
       |  rule_type,
       |  scala_version,
@@ -67,7 +67,7 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
     insert(
       Bld(
         id = 0,
-        path = path.mkString("."),
+        path = path,
         ruleType = bld.rule_type,
         javaVersion = bld.java_version,
         scalaVersion = bld.scala_version,
@@ -80,6 +80,6 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
   }
 
   val selectByPathSql: Select[Bld] =
-    Select("SELECT * FROM blds WHERE path = @path")
+    Select[Bld]("SELECT * FROM mool.blds WHERE path = @path")
 
 }

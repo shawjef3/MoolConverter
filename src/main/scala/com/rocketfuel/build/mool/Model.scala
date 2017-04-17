@@ -11,14 +11,12 @@ import scalaz.StrictTree
   * @param blds
   * @param relCfgs
   * @param versions
-  * @param bldToTestBldSupplement contains cases to override the test bld heuristic.
   */
 case class Model(
   root: Path,
   blds: Map[MoolPath, Bld],
   relCfgs: Map[MoolPath, RelCfg],
-  versions: Map[MoolPath, Set[Version]],
-  bldToTestBldSupplement: Map[MoolPath, Set[MoolPath]]
+  versions: Map[MoolPath, Set[Version]]
 ) extends Graphviz {
 
   def spanningTrees: Vector[StrictTree[MoolPath]] =
@@ -311,8 +309,7 @@ object Model {
     Set("file_coll", "java_lib", "java_bin", "java_proto_lib", "java_thrift_lib", "java_test", "release_package", "scala_lib", "scala_test", "scala_bin")
 
   def ofRepository(
-    repo: Path,
-    bldToTestBldSupplement: Map[MoolPath, Set[MoolPath]]
+    repo: Path
   ): Model = {
     val bldFiles = findFiles(repo, "BLD")
     val relCfgFiles = findFiles(repo, "RELCFG")
@@ -344,7 +341,7 @@ object Model {
         versionFile <- versionFiles
         versionsInFile = Version.ofFile(repo.resolve(versionFile))
         versionFilePathParts = versionFile.split("/").dropRight(1).toVector
-        (groupId, groupVersions) <- versionsInFile.groupBy(_.groupId)
+        (groupId, groupVersions) <- versionsInFile.groupBy(_.artifactId)
       } yield (versionFilePathParts :+ groupId) -> groupVersions
     }.toMap
 
@@ -352,8 +349,7 @@ object Model {
       root = repo,
       blds = blds.foldLeft(Map.empty[MoolPath, Bld])(_ ++ _),
       relCfgs = relCfgs.foldLeft(Map.empty[MoolPath, RelCfg])(_ ++ _),
-      versions = versions,
-      bldToTestBldSupplement
+      versions = versions
     )
   }
 

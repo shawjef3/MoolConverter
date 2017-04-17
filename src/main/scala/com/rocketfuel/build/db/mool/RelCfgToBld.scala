@@ -16,7 +16,7 @@ case class RelCfgToBld(
 object RelCfgToBld extends Deployable with InsertableToValue[RelCfgToBld] with SelectableById[BldToBld] {
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
-      """CREATE TABLE relcfg_to_bld (
+      """CREATE TABLE mool.relcfg_to_bld (
         |  id serial PRIMARY KEY,
         |  relcfg_id int NOT NULL,
         |  bld_id int NOT NULL,
@@ -28,10 +28,10 @@ object RelCfgToBld extends Deployable with InsertableToValue[RelCfgToBld] with S
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("""DROP TABLE IF EXISTS relcfg_to_bld""")
+    Ignore.ignore("""DROP TABLE IF EXISTS mool.relcfg_to_bld""")
 
   override val insertSql: CompiledStatement =
-    """INSERT INTO relcfg_to_bld (
+    """INSERT INTO mool.relcfg_to_bld (
       |  relcfg_id,
       |  bld_id,
       |  with_deps,
@@ -46,7 +46,7 @@ object RelCfgToBld extends Deployable with InsertableToValue[RelCfgToBld] with S
 
   override val selectByIdSql: CompiledStatement =
     """SELECT *
-      |FROM relcfg_to_bld
+      |FROM mool.relcfg_to_bld
       |WHERE id = @id
       |""".stripMargin
 

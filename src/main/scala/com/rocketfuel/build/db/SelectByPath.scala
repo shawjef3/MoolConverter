@@ -8,9 +8,9 @@ trait SelectByPath[A] {
   val selectByPathSql: Select[A]
 
   def selectByPath(path: String)(implicit connection: Connection): Option[A] =
-    selectByPathSql.on("path" -> path).option()
+    selectByPath(path.split('.').toVector)
 
   def selectByPath(path: MoolPath)(implicit connection: Connection): Option[A] =
-    selectByPath(path.mkString("."))
+    selectByPathSql.on("path" -> path).option()
 
 }

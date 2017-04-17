@@ -67,8 +67,7 @@ class ModelSpec extends FunSuite {
       root = Paths.get("."),
       blds = blds,
       relCfgs = relCfgs,
-      versions = Map.empty,
-      bldToTestBldSupplement = Map.empty
+      versions = Map.empty
     )
 
   test("bldsToBlds") {

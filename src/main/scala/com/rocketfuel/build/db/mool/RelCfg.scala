@@ -1,13 +1,12 @@
 package com.rocketfuel.build.db.mool
 
 import com.rocketfuel.build.db._
-import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql
 import com.rocketfuel.sdbc.PostgreSql._
 
 case class RelCfg(
   id: Int,
-  path: String,
+  path: Seq[String],
   groupId: String,
   artifactId: String,
   baseVersion: String
@@ -16,9 +15,9 @@ case class RelCfg(
 object RelCfg extends Deployable with InsertableToValue[RelCfg] with SelectableById[RelCfg] with SelectByPath[RelCfg] {
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
-      """CREATE TABLE relcfgs (
+      """CREATE TABLE mool.relcfgs (
         |  id serial PRIMARY KEY,
-        |  path text NOT NULL UNIQUE,
+        |  path text[] NOT NULL UNIQUE,
         |  group_id text NOT NULL,
         |  artifact_id text NOT NULL,
         |  base_version text NOT NULL
@@ -27,10 +26,10 @@ object RelCfg extends Deployable with InsertableToValue[RelCfg] with SelectableB
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("DROP TABLE IF EXISTS relcfgs")
+    Ignore.ignore("DROP TABLE IF EXISTS mool.relcfgs")
 
   override val insertSql: CompiledStatement =
-    """INSERT INTO relcfgs (
+    """INSERT INTO mool.relcfgs (
       |  path,
       |  group_id,
       |  artifact_id,
@@ -47,6 +46,6 @@ object RelCfg extends Deployable with InsertableToValue[RelCfg] with SelectableB
     "SELECT * FROM relcfgs WHERE id = @id"
 
   override val selectByPathSql: PostgreSql.Select[RelCfg] =
-    Select("SELECT * FROM relcfgs WHERE path = @path")
+    Select[RelCfg]("SELECT * FROM relcfgs WHERE path = @path")
 
 }

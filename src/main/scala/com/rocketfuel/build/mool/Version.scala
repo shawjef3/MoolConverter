@@ -3,9 +3,9 @@ package com.rocketfuel.build.mool
 import java.nio.file.{Files, Path}
 
 case class Version(
-  groupId: String,
+  artifactId: String,
   commit: String,
-  version: Vector[Int]
+  version: String
 ) {
   def compareTo(other: Version): Int = {
     version.iterator.map(Some(_)).zipAll(other.version.iterator.map(Some(_)), None, None).map {
@@ -25,7 +25,7 @@ object Version {
     val groupId = split(0).trim
     val commit = split(1).trim
     val version = split(2).trim
-    Version(groupId, commit, version.split('.').map(_.toInt).toVector)
+    Version(groupId, commit, version)
   }
 
   def ofFile(file: Path): Set[Version] = {

@@ -1,6 +1,7 @@
 package com.rocketfuel.build.db.mool
 
 import com.rocketfuel.build.db._
+import com.rocketfuel.sdbc.PostgreSql
 import com.rocketfuel.sdbc.PostgreSql._
 
 case class BldToSource(
@@ -9,10 +10,13 @@ case class BldToSource(
   sourceId: Int
 )
 
-object BldToSource extends Deployable with InsertableToValue[BldToSource] with SelectableById[BldToSource] {
+object BldToSource extends Deployable with InsertableToValue[BldToSource] with SelectableById[BldToSource] with Listable[BldToSource] {
+  override protected implicit val rowConverter: PostgreSql.RowConverter[BldToSource] =
+    RowConverter[BldToSource]
+
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
-      """CREATE TABLE bld_to_sources (
+      """CREATE TABLE mool.bld_to_sources (
       |  id serial PRIMARY KEY,
       |  bld_id int NOT NULL,
       |  source_id int NOT NULL,
@@ -22,10 +26,10 @@ object BldToSource extends Deployable with InsertableToValue[BldToSource] with S
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("DROP TABLE IF EXISTS bld_to_sources")
+    Ignore.ignore("DROP TABLE IF EXISTS mool.bld_to_sources")
 
   override val insertSql: CompiledStatement =
-    """INSERT INTO bld_to_sources (
+    """INSERT INTO mool.bld_to_sources (
       |  bld_id,
       |  source_id
       |) VALUES (
@@ -35,17 +39,20 @@ object BldToSource extends Deployable with InsertableToValue[BldToSource] with S
       |""".stripMargin
 
   override val selectByIdSql: CompiledStatement =
-    "SELECT * FROM bld_to_sources WHERE id = @id"
+    "SELECT * FROM mool.bld_to_sources WHERE id = @id"
 
   val selectByBldId: Select[BldToSource] =
-    Select("SELECT * FROM bld_to_sources WHERE bld_id = @bld_id")
+    Select("SELECT * FROM mool.bld_to_sources WHERE bld_id = @bld_id")
 
   def selectByBldId(bldId: Int)(implicit connection: Connection): Vector[BldToSource] =
     selectByBldId.on("bld_id" -> bldId).vector()
 
   val selectBySourceId: Select[BldToSource] =
-    Select("SELECT * FROM bld_to_sources WHERE source_id = @source_id")
+    Select("SELECT * FROM mool.bld_to_sources WHERE source_id = @source_id")
 
   def selectBySourceId(sourceId: Int)(implicit connection: Connection): Vector[BldToSource] =
     selectByBldId.on("source_id" -> sourceId).vector()
+
+  override val listSource: String =
+    "SELECT * FROM mool.bld_to_sources"
 }

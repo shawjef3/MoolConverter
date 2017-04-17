@@ -1,11 +1,13 @@
 package com.rocketfuel.build.db.mool
 
+import com.rocketfuel.build.Logger
+import com.rocketfuel.build.mool.{Bld => MoolBld, MoolPath}
 import com.rocketfuel.sdbc.PostgreSql._
 import org.postgresql.util.PSQLException
 
-object Model {
+class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
 
-  def insert(model: com.rocketfuel.build.mool.Model)(implicit connection: Connection): Unit = {
+  def insert()(implicit connection: Connection): Unit = {
 
     /*
     insert BLDs
@@ -18,9 +20,8 @@ object Model {
      */
 
     val dbBlds =
-      for {
-        (bldPath, bld) <- model.blds
-      } yield bldPath -> Bld.create(bldPath, bld)
+      for ((bldPath, bld) <- model.blds) yield
+        bldPath -> Bld.create(bldPath, bld)
 
     for ((bldPath, bld) <- model.blds) {
       val dbBld = dbBlds(bldPath)
@@ -35,24 +36,25 @@ object Model {
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
             //The bld already has the source, so don't do anything.
-            ()
+            logger.info(s"duplicate source dependency $bldPath -> $source")
         }
 
-      for (dep <- bld.depPaths(bldPath)) {
-        val dbDep = Bld.selectByPath(dep).get
+      for (depPath <- bld.depPaths(bldPath)) {
+        val dbDep = dbBlds(depPath)
+
         try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = false))
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
-            ()
+            logger.info(s"duplicate bld dependency $bldPath -> $depPath")
         }
       }
 
-      for (dep <- bld.compileDepPaths(bldPath)) {
-        val dbDep = Bld.selectByPath(dep).get
+      for (depPath <- bld.compileDepPaths(bldPath)) {
+        val dbDep = dbBlds(depPath)
         try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = true))
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
-            ()
+            logger.info(s"duplicate bld dependency $bldPath -> $depPath")
         }
       }
     }
@@ -62,7 +64,7 @@ object Model {
         RelCfg.insert(
           RelCfg(
             id = 0,
-            path = relCfgPath.mkString("."),
+            path = relCfgPath,
             groupId = relCfg.group_id,
             artifactId = relCfg.artifact_id,
             baseVersion = relCfg.base_version
@@ -77,14 +79,22 @@ object Model {
           RelCfgToBld.insert(RelCfgToBld(0, db.id, dbBld.id, false, noDeps.artifact_path))
         }
 
-      val depsBld =
-        for (withDeps <- relCfg.`jar-with-dependencies`) yield {
-          //drop(5) removes "mool."
-          val dbBld = Bld.selectByPath(withDeps.target.drop(5)).get
+//      val depsBld =
+//        for (withDeps <- relCfg.`jar-with-dependencies`) yield {
+//          //drop(5) removes "mool."
+//          val dbBld = Bld.selectByPath(dealias(model, withDeps.target.split('.').toVector.tail)).get
+//
+//          RelCfgToBld.insert(RelCfgToBld(0, db.id, dbBld.id, true, withDeps.artifact_path))
+//        }
+    }
 
-          RelCfgToBld.insert(RelCfgToBld(0, db.id, dbBld.id, true, withDeps.artifact_path))
-        }
+    for {
+      (path, versions) <- model.versions
+      version <- versions
+    } {
+      Version.insert(Version(0, path, version.artifactId, version.commit, version.version))
     }
 
   }
+
 }

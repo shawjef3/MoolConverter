@@ -17,7 +17,8 @@ object Dependency
   case class Maven(
     groupId: String,
     artifactId: String,
-    version: String
+    version: String,
+    scope: String = "compile"
   ) extends Dependency
 
   case class RelCfg(path: MoolPath) extends Dependency
@@ -30,8 +31,8 @@ object Dependency
             if (path.nonEmpty)
               "Bld(Vector(\"" +: Cord.fromStrings(path.intersperse("\",\"")) :+ "\")"
             else "Bld(Vector())"
-          case Maven(groupId, artifactId, version) =>
-            "Maven(\"" +: Cord.fromStrings(Vector(groupId, artifactId, version).intersperse("\",\"")) :+ "\")"
+          case Maven(groupId, artifactId, version, scope) =>
+            "Maven(\"" +: Cord.fromStrings(Vector(groupId, artifactId, version, scope).intersperse("\",\"")) :+ "\")"
           case RelCfg(path) =>
             if (path.nonEmpty)
               Cord.fromStrings("RelCfg(Vector(\"" +: path.intersperse("\",\"") :+ "\")")

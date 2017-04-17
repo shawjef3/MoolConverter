@@ -12,7 +12,7 @@ case class Source(
 object Source extends Deployable with InsertableToValue[Source] with SelectableById[Source] {
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
-      """CREATE TABLE sources (
+      """CREATE TABLE mool.sources (
         |  id serial PRIMARY KEY,
         |  path text NOT NULL UNIQUE
         |)
@@ -20,10 +20,10 @@ object Source extends Deployable with InsertableToValue[Source] with SelectableB
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("DROP TABLE IF EXISTS sources")
+    Ignore.ignore("DROP TABLE IF EXISTS mool.sources")
 
   override val insertSql: CompiledStatement =
-    """INSERT INTO sources (
+    """INSERT INTO mool.sources (
       |  path
       |) VALUES (
       |  @path
@@ -32,10 +32,10 @@ object Source extends Deployable with InsertableToValue[Source] with SelectableB
     """.stripMargin
 
   override val selectByIdSql: CompiledStatement =
-    "SELECT * FROM sources WHERE id = @id"
+    "SELECT * FROM mool.sources WHERE id = @id"
 
   val selectByPath: CompiledStatement =
-    "SELECT * FROM sources WHERE path = @path"
+    "SELECT * FROM mool.sources WHERE path = @path"
 
   def selectByPath(path: String)(implicit connection: Connection): Option[Source] =
     Select[Source](selectByPath).on("path" -> path).option()
