@@ -21,7 +21,8 @@ object Deploy extends Deployable {
       mvn.Schema,
       mvn.ModulePath,
       mvn.Copy,
-      mvn.BldIdentifier
+      mvn.Identifier,
+      mvn.Dependency
     ).fold(Deployable.empty)(_ + _)
 
   override def deploy()(implicit connection: Connection): Unit =

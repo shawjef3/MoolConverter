@@ -21,7 +21,7 @@ object ModulePath extends Deployable with SelectableById[ModulePath] {
         |      '/',
         |      NULL
         |    ) AS path
-        |  FROM blds
+        |  FROM mool.blds
         |  WHERE array[path[1], path[2]] != array['java', 'mvn']
         |)
         |""".stripMargin

@@ -36,7 +36,7 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
             //The bld already has the source, so don't do anything.
-            logger.info(s"duplicate source dependency $bldPath -> $source")
+            logger.warn(s"duplicate source dependency $bldPath -> $source")
         }
 
       for (depPath <- bld.depPaths(bldPath)) {
@@ -45,7 +45,7 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
         try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = false))
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
-            logger.info(s"duplicate bld dependency $bldPath -> $depPath")
+            logger.warn(s"duplicate bld dependency $bldPath -> $depPath")
         }
       }
 
@@ -54,7 +54,7 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
         try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = true))
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
-            logger.info(s"duplicate bld dependency $bldPath -> $depPath")
+            logger.warn(s"duplicate bld dependency $bldPath -> $depPath")
         }
       }
     }

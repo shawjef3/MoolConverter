@@ -3,14 +3,14 @@ package com.rocketfuel.build.db.mvn
 import com.rocketfuel.build.db.{Deployable, Listable}
 import com.rocketfuel.sdbc.PostgreSql._
 
-case class BldIdentifier(
+case class Identifier(
   bldId: Int,
   groupId: String,
   artifactId: String,
   version: String
 )
 
-object BldIdentifier extends Deployable with Listable[BldIdentifier] {
+object Identifier extends Deployable with Listable[Identifier] {
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
       """CREATE OR REPLACE VIEW mvn.identifiers AS
@@ -42,7 +42,7 @@ object BldIdentifier extends Deployable with Listable[BldIdentifier] {
         |    )
         |  ) AS artifact_id,
         |  coalesce(version, 'M1') AS version
-        |  FROM blds
+        |  FROM mool.blds
         |), counted_duplicates AS (
         |  SELECT
         |    row_number() over (PARTITION BY group_id, artifact_id, version) AS duplicate_id,
@@ -66,6 +66,6 @@ object BldIdentifier extends Deployable with Listable[BldIdentifier] {
 
   override val listSource: String = "SELECT * FROM mvn.identifiers"
 
-  override protected implicit val rowConverter: RowConverter[BldIdentifier] =
-    RowConverter[BldIdentifier]
+  override protected implicit val rowConverter: RowConverter[Identifier] =
+    RowConverter[Identifier]
 }

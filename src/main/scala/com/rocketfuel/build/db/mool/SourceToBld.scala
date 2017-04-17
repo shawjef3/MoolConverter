@@ -13,7 +13,7 @@ object SourceToBld extends Deployable {
         |FROM mool.blds
         |INNER JOIN mool.bld_to_sources
         |  ON blds.id = bld_to_sources.bld_id
-        |INNER JOIN sources
+        |INNER JOIN mool.sources
         |  ON bld_to_sources.source_id = sources.id
         |GROUP BY sources.id, blds.id
         |""".stripMargin
