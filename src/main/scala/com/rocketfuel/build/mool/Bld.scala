@@ -26,7 +26,7 @@ case class Bld(
     val bldDir = bldPath.foldLeft(root)(_.resolve(_))
     for {
       src <- srcs.getOrElse(Vector.empty)
-    } yield bldDir.resolve(src)
+    } yield bldDir.resolveSibling(src)
   }
 
   def depPaths(bldPath: MoolPath): Vector[MoolPath] =

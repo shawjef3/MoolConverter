@@ -9,23 +9,10 @@ case class ModulePath(
 )
 
 object ModulePath extends Deployable with SelectableById[ModulePath] {
+  val deployQuery = Ignore.readClassResource(classOf[Identifier], "module_paths.sql")
+
   override def deploy()(implicit connection: Connection): Unit =
-    Ignore.ignore(
-      """CREATE VIEW mvn.module_paths AS (
-        |  SELECT
-        |    id,
-        |    array_to_string(
-        |      CASE WHEN path[1:3] = array['java', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
-        |           ELSE path
-        |      END,
-        |      '/',
-        |      NULL
-        |    ) AS path
-        |  FROM mool.blds
-        |  WHERE array[path[1], path[2]] != array['java', 'mvn']
-        |)
-        |""".stripMargin
-    )
+    deployQuery.ignore()
 
   override def undeploy()(implicit connection: Connection): Unit =
     Ignore.ignore("DROP VIEW IF EXISTS mvn.module_paths CASCADE")

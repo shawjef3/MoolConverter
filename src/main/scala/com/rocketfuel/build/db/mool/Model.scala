@@ -29,7 +29,10 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
       val sources =
         for {
           src <- bld.srcPaths(model, bldPath)
-        } yield Source.insertOrSelect(model.root.relativize(src).toString)
+        } yield {
+          val relativePath = model.root.relativize(src).toString
+          Source.insertOrSelect(relativePath)
+        }
 
       for (source <- sources)
         try BldToSource.insert(BldToSource(0, dbBld.id, source.id))

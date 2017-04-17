@@ -1,7 +1,6 @@
 package com.rocketfuel.build.db.mool
 
 import com.rocketfuel.build.db._
-import com.rocketfuel.sdbc.PostgreSql
 import com.rocketfuel.sdbc.PostgreSql._
 
 case class BldToSource(
@@ -10,9 +9,9 @@ case class BldToSource(
   sourceId: Int
 )
 
-object BldToSource extends Deployable with InsertableToValue[BldToSource] with SelectableById[BldToSource] with Listable[BldToSource] {
-  override protected implicit val rowConverter: PostgreSql.RowConverter[BldToSource] =
-    RowConverter[BldToSource]
+object BldToSource extends Deployable with InsertableToValue[BldToSource] with SelectableById[BldToSource] {
+  val list =
+    Select[BldToSource]("SELECT id, bld_id bldId, source_id sourceId FROM mool.bld_to_sources")
 
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
@@ -53,6 +52,4 @@ object BldToSource extends Deployable with InsertableToValue[BldToSource] with S
   def selectBySourceId(sourceId: Int)(implicit connection: Connection): Vector[BldToSource] =
     selectByBldId.on("source_id" -> sourceId).vector()
 
-  override val listSource: String =
-    "SELECT * FROM mool.bld_to_sources"
 }

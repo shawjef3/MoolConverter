@@ -5,13 +5,16 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 case class Version(
   id: Int,
-  path: Vector[String],
+  path: Seq[String],
   artifactId: String,
   commit: String,
   version: String
 )
 
-object Version extends Deployable with Listable[Version] with SelectableById[Version] with InsertableToValue[Version] {
+object Version extends  Deployable with SelectableById[Version] with InsertableToValue[Version] {
+  val list =
+    Select[BldToSource]("SELECT * FROM mool.versions")
+
   override val insertSql: CompiledStatement =
     """INSERT INTO mool.versions (
       |  path, artifact_id, commit, version
@@ -34,12 +37,6 @@ object Version extends Deployable with Listable[Version] with SelectableById[Ver
 
   override def undeploy()(implicit connection: Connection): Unit =
     Ignore.ignore("DROP TABLE IF EXISTS mool.versions")
-
-  override val listSource: String =
-    "SELECT * FROM mool.versions"
-
-  override protected implicit val rowConverter: RowConverter[Version] =
-    RowConverter[Version]
 
   override val selectByIdSql: CompiledStatement =
     "SELECT * FROM mool.versions WHERE id = @id"

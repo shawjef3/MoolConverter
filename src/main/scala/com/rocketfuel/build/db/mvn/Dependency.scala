@@ -1,10 +1,11 @@
 package com.rocketfuel.build.db.mvn
 
-import com.rocketfuel.build.db.{Deployable, Listable}
+import com.rocketfuel.build.db.Deployable
 import com.rocketfuel.sdbc.PostgreSql._
 
 case class Dependency(
-  bldId: Int,
+  sourceId: Int,
+  targetId: Int,
   groupId: String,
   artifactId: String,
   version: String,
@@ -13,33 +14,18 @@ case class Dependency(
 
 }
 
-object Dependency extends Deployable with Listable[Dependency] {
+object Dependency extends Deployable {
+  val list =
+    Select[Dependency]("SELECT source_id sourceId, target_id targetId, group_id groupId, artifact_id artifactId, version, scope FROM mvn.dependencies")
+
+  val selectBySourceId =
+    Select[Dependency](list.queryText + " WHERE source_id = @sourceId")
+
+  val deployQuery = Ignore.readClassResource(classOf[Dependency], "dependencies.sql")
+
   override def deploy()(implicit connection: Connection): Unit =
-    Ignore.ignore(
-      """CREATE OR REPLACE VIEW mvn.dependencies AS
-        |SELECT
-        |  bld_to_bld.source_id,
-        |  bld_to_bld.target_id,
-        |  identifiers.group_id,
-        |  identifiers.artifact_id,
-        |  identifiers.version,
-        |  CASE WHEN blds.rule_type like '%_test' THEN 'test' --BLDs only have one scope
-        |       ELSE 'main'
-        |  END AS scope
-        |FROM mool.bld_to_bld
-        |INNER JOIN mool.blds
-        |  ON bld_to_bld.target_id = blds.id
-        |INNER JOIN mvn.identifiers
-        |  ON identifiers.bld_id = bld_to_bld.target_id
-        |""".stripMargin
-    )
+    deployQuery.ignore()
 
   override def undeploy()(implicit connection: Connection): Unit =
     Ignore.ignore("DROP VIEW IF EXISTS mvn.dependencies CASCADE")
-
-  override val listSource: String =
-    "SELECT * FROM mvn.dependencies"
-
-  override protected implicit val rowConverter: RowConverter[Dependency] =
-    RowConverter[Dependency]
 }

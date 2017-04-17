@@ -1,7 +1,5 @@
-package com.rocketfuel.build.jvmlib
+package com.rocketfuel.build.db
 
-import com.rocketfuel.build.db._
-import com.rocketfuel.build.mool
 import com.rocketfuel.sdbc.PostgreSql._
 import com.zaxxer.hikari.HikariConfig
 import java.nio.file.Paths
@@ -22,7 +20,7 @@ object MainInsert extends App {
 
     val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
 
-    val moolModel = mool.Model.ofRepository(moolRoot)
+    val moolModel = com.rocketfuel.build.mool.Model.ofRepository(moolRoot)
 
     val sqlModel = new com.rocketfuel.build.db.mool.Model(moolModel)
 
