@@ -13,6 +13,11 @@ object MainConvert extends App {
 
   val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
 
+  if (!dry) {
+    if (Files.exists(destinationRoot))
+      Files.walk(destinationRoot).forEach(p => Files.delete(p))
+  }
+
   val dbConfig = new HikariConfig()
 
   dbConfig.setJdbcUrl("jdbc:postgresql://localhost/jshaw")
@@ -23,10 +28,11 @@ object MainConvert extends App {
     for (copy <- Copy.all.iterator()) {
       val source = moolRoot.resolve(copy.source)
       val destination = destinationRoot.resolve(copy.destination)
-      println(copy)
       if (dry) {
+        println(copy)
         assert(Files.exists(source))
       } else {
+        Files.createDirectories(destination.getParent)
         Files.copy(source, destination)
       }
     }
@@ -34,18 +40,22 @@ object MainConvert extends App {
     for (bld <- mool.Bld.localBlds.iterator()) {
       val identifier = mvn.Identifier.selectByBldId.on("bldId" -> bld.id).one()
       val dependencies = mvn.Dependency.selectBySourceId.on("sourceId" -> bld.id).vector()
-      println(identifier)
-
-      for (dependency <- dependencies) {
-        print("\t")
-        println(dependency)
-      }
 
       val path = ModulePath.selectById(bld.id).get
       val pom = bld.pom(identifier, dependencies)
+      val pomPath = destinationRoot.resolve(path.path).resolve("pom.xml")
 
-      if (!dry)
-        Files.write(destinationRoot.resolve(path.path).resolve("pom.xml"), pom.toString.getBytes)
+      if (dry) {
+        println(identifier)
+
+        for (dependency <- dependencies) {
+          print("\t")
+          println(dependency)
+        }
+      } else {
+        Files.createDirectories(pomPath.getParent)
+        Files.write(pomPath, pom.toString.getBytes)
+      }
     }
 
   }
