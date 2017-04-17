@@ -2,6 +2,7 @@ package com.rocketfuel.build.db.mvn
 
 import com.rocketfuel.build.db.Deployable
 import com.rocketfuel.sdbc.PostgreSql._
+import scala.xml._
 
 case class Dependency(
   sourceId: Int,
@@ -11,6 +12,21 @@ case class Dependency(
   version: String,
   scope: String
 ) {
+
+  lazy val mavenDefinition: NodeSeq = {
+    <groupId>
+      {groupId}
+    </groupId>
+    <artifactId>
+      {artifactId}
+    </artifactId>
+    <version>
+      {version}
+    </version>
+    <scope>
+      {scope}
+    </scope>
+  }
 
 }
 

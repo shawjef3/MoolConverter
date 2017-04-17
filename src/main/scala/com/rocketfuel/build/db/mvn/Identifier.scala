@@ -8,11 +8,25 @@ case class Identifier(
   groupId: String,
   artifactId: String,
   version: String
-)
+) {
+  lazy val mavenDefinition =
+    <groupId>
+      {groupId}
+    </groupId>
+    <artifactId>
+      {artifactId}
+    </artifactId>
+    <version>
+      {version}
+    </version>
+}
 
 object Identifier extends Deployable {
   val list =
     Select[Identifier]("SELECT bld_id bldId, group_id groupId, artifact_id artifactId, version FROM mvn.identifiers")
+
+  val selectByBldId =
+    Select[Identifier](list.queryText + " WHERE bld_id = @bldId")
 
   val deployQuery = Ignore.readClassResource(classOf[Identifier], "identifiers.sql")
 

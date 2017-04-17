@@ -9,7 +9,7 @@ case class Copy(
 )
 
 object Copy extends Deployable {
-  val list =
+  val all =
     Select[Copy]("SELECT * FROM mvn.copies")
 
   val deployQuery = Ignore.readClassResource(classOf[Identifier], "copies.sql")

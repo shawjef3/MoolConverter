@@ -20,20 +20,32 @@ object MainConvert extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-    for (copy <- Copy.list.iterator()) {
+    for (copy <- Copy.all.iterator()) {
+      val source = moolRoot.resolve(copy.source)
+      val destination = destinationRoot.resolve(copy.destination)
       println(copy)
       if (dry) {
-        assert(Files.exists(moolRoot.resolve(copy.source)))
+        assert(Files.exists(source))
       } else {
-        Files.copy(moolRoot.resolve(copy.source), destinationRoot.resolve(copy.destination))
+        Files.copy(source, destination)
       }
     }
 
-    for (identifier <- Identifier.list.iterator()) {
+    for (bld <- mool.Bld.localBlds.iterator()) {
+      val identifier = mvn.Identifier.selectByBldId.on("bldId" -> bld.id).one()
+      val dependencies = mvn.Dependency.selectBySourceId.on("sourceId" -> bld.id).vector()
       println(identifier)
-      for (dependency <- Dependency.selectBySourceId.on("sourceId" -> identifier.bldId).iterator()) {
-        println(s"\t${identifier.bldId} -> $dependency")
+
+      for (dependency <- dependencies) {
+        print("\t")
+        println(dependency)
       }
+
+      val path = ModulePath.selectById(bld.id).get
+      val pom = bld.pom(identifier, dependencies)
+
+      if (!dry)
+        Files.write(destinationRoot.resolve(path.path).resolve("pom.xml"), pom.toString.getBytes)
     }
 
   }
