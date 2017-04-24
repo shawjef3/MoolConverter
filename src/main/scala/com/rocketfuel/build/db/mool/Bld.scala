@@ -18,20 +18,43 @@ case class Bld(
   repoUrl: Option[String] = None
 ) {
 
-  def pom(identifier: Identifier, dependencies: Vector[Dependency]): Elem =
+  def pom(bld: Bld, identifier: Identifier, dependencies: Vector[Dependency]): Elem = {
+    val parentArtifact =
+      (bld.ruleType, bld.scalaVersion) match {
+        case ("scala_test" |
+              "scala_bin" |
+              "scala_lib", Some(scalaVersion)) =>
+          s"scala-$scalaVersion"
+
+        case ("clojure_lib" |
+              "clojure_bin", _) =>
+          "clojure"
+
+        case ("java_test" |
+              "java_bin" |
+              "java_lib" |
+              "java_proto_lib", _) =>
+          "java"
+
+        case _ =>
+          //TODO: maybe a better default
+          "java"
+      }
+
     <project xmlns="http://maven.apache.org/POM/4.0.0"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-      <modelVersion>4.0.0</modelVersion>
+      <modelVersion>4.0.0</modelVersion>{identifier.mavenDefinition}<dependencies>
 
-      {identifier.mavenDefinition}
+      <parent>
+        <groupId>com.rocketfuel.poms</groupId>
+        <artifactId>{parentArtifact}</artifactId>
+        <version>1.0-SNAPSHOT</version>
+      </parent>
 
-      <dependencies>
-        {
-          for (dependency <- dependencies) yield
-            dependency.mavenDefinition
-        }
-      </dependencies>
+      {for (dependency <- dependencies) yield
+        dependency.mavenDefinition}
+    </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -39,56 +62,55 @@ case class Bld(
             <artifactId>maven-compiler-plugin</artifactId>
             <version>3.6.1</version>
             <configuration>
-            {
-              val j = javaVersion.getOrElse("1.8")
-              <source>{j}</source>
-              <target>{j}</target>
-            }
+              {val j = javaVersion.getOrElse("1.8")
+            <source>
+              {j}
+            </source>
+              <target>
+                {j}
+              </target>}
             </configuration>
-          </plugin>
-          {
-            scalaVersion match {
-              case None =>
-              case Some(v) =>
-                <plugin>
-                  <groupId>net.alchim31.maven</groupId>
-                  <artifactId>scala-maven-plugin</artifactId>
-                  <version>3.2.2</version>
-                  <executions>
-                    <execution>
-                      <goals>
-                        <goal>compile</goal>
-                        <goal>testCompile</goal>
-                      </goals>
-                    </execution>
-                  </executions>
-                  <configuration>
-                    <scalaVersion>
-                      {v}
-                    </scalaVersion>
-                  </configuration>
-                </plugin>
-            }
-          }
-          <plugin>
-            <groupId>org.xolstice.maven.plugins</groupId>
-            <artifactId>protobuf-maven-plugin</artifactId>
-            <version>0.5.0</version>
-            <configuration>
-              <protocExecutable>/usr/local/bin/protoc</protocExecutable>
-            </configuration>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>compile</goal>
-                  <goal>test-compile</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
+          </plugin>{scalaVersion match {
+          case None =>
+          case Some(v) =>
+            <plugin>
+              <groupId>net.alchim31.maven</groupId>
+              <artifactId>scala-maven-plugin</artifactId>
+              <version>3.2.2</version>
+              <executions>
+                <execution>
+                  <goals>
+                    <goal>compile</goal>
+                    <goal>testCompile</goal>
+                  </goals>
+                </execution>
+              </executions>
+              <configuration>
+                <scalaVersion>
+                  {v}
+                </scalaVersion>
+              </configuration>
+            </plugin>
+        }}<plugin>
+          <groupId>org.xolstice.maven.plugins</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>0.5.0</version>
+          <configuration>
+            <protocExecutable>/usr/local/bin/protoc</protocExecutable>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>compile</goal>
+                <goal>test-compile</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
         </plugins>
       </build>
     </project>
+  }
 
 }
 

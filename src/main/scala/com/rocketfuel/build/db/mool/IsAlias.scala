@@ -21,7 +21,7 @@ object IsAlias extends Deployable {
         |  GROUP BY source_id
         |  HAVING source_id = bld.id;
         |
-        |  RETURN (src_count IS NULL OR src_count = 0) AND (dep_count IS NULL OR dep_count = 1) AND bld.artifact_id IS NULL AND bld.group_id IS NULL AND bld.version IS NULL;
+        |  RETURN coalesce(0, src_count) = 0 AND coalesce(dep_count, 0) = 1 AND bld.artifact_id IS NULL AND bld.group_id IS NULL AND bld.version IS NULL;
         |END;
         |$$ LANGUAGE plpgsql;
         |

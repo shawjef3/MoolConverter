@@ -4,7 +4,7 @@ import com.rocketfuel.sdbc.PostgreSql._
 import com.zaxxer.hikari.HikariConfig
 import java.nio.file.Paths
 
-object MainInsert extends App {
+object MainDeploy extends App {
 
   val dbConfig = new HikariConfig()
 

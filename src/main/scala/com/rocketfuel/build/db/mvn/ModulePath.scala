@@ -9,6 +9,8 @@ case class ModulePath(
 )
 
 object ModulePath extends Deployable with SelectableById[ModulePath] {
+  val list = Select[ModulePath]("SELECT * FROM mvn.module_paths")
+
   val deployQuery = Ignore.readClassResource(classOf[Identifier], "module_paths.sql")
 
   override def deploy()(implicit connection: Connection): Unit =

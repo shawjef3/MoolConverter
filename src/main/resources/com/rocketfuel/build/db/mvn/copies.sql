@@ -6,9 +6,15 @@ WITH dir_parts AS (
       CASE WHEN blds.rule_type like '%_test' THEN 'test'
            ELSE 'main'
       END AS config_path,
-      CASE WHEN sources.path LIKE '%.scala' THEN 'scala'
+      CASE WHEN sources.path LIKE '%.clj' THEN 'clojure'
+           WHEN sources.path LIKE '%.scala' THEN 'scala'
            WHEN sources.path LIKE '%.java' THEN 'java'
            WHEN sources.path LIKE '%.py' THEN 'python'
+           WHEN sources.path LIKE '%.g' THEN 'antlr'
+           WHEN sources.path LIKE '%.proto' THEN 'proto'
+           WHEN sources.path LIKE '%.thrift' THEN 'thrift'
+           WHEN sources.path LIKE '%.c' THEN 'c'
+           WHEN sources.path LIKE '%.cc' THEN 'c++'
            ELSE 'resources'
       END AS lang_path
     FROM mool.blds

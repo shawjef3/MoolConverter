@@ -13,20 +13,21 @@ case class Dependency(
   scope: String
 ) {
 
-  lazy val mavenDefinition: NodeSeq = {
-    <groupId>
-      {groupId}
-    </groupId>
-    <artifactId>
-      {artifactId}
-    </artifactId>
-    <version>
-      {version}
-    </version>
-    <scope>
-      {scope}
-    </scope>
-  }
+  lazy val mavenDefinition: NodeSeq =
+    <dependency>
+      <groupId>
+        {groupId}
+      </groupId>
+      <artifactId>
+        {artifactId}
+      </artifactId>
+      <version>
+        {version}
+      </version>
+      <scope>
+        {scope}
+      </scope>
+    </dependency>
 
 }
 

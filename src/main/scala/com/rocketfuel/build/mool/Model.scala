@@ -45,7 +45,15 @@ case class Model(
     for {
       (bldPath, bld) <- blds
     } yield {
-      bldPath -> (bld.depPaths(bldPath).toSet ++ bld.compileDepPaths(bldPath).toSet)
+      bldPath -> bld.compileDepPaths(bldPath).toSet
+    }
+  }
+
+  val bldsToCompileBlds: Map[MoolPath, Set[MoolPath]] = {
+    for {
+      (bldPath, bld) <- blds
+    } yield {
+      bldPath -> bld.compileDepPaths(bldPath).toSet
     }
   }
 
@@ -323,7 +331,6 @@ object Model {
         val bldPathParts = bldFile.split("/").dropRight(1).toVector
         for {
           (bldName, bld) <- blds
-          if javaRuleTypes.contains(bld.rule_type)
         } yield (bldPathParts :+ bldName) -> bld
       }
 
