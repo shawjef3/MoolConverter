@@ -1,7 +1,6 @@
 package com.rocketfuel.build.db.mool
 
 import java.nio.file.Path
-
 import com.rocketfuel.build.db._
 import com.rocketfuel.build.db.mvn.{Dependency, Identifier}
 import com.rocketfuel.build.mool.MoolPath
@@ -21,9 +20,9 @@ case class Bld(
   repoUrl: Option[String] = None
 ) {
 
-  def pom(bld: Bld, identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, pomParent: Path): Elem = {
+  def pom(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path): Elem = {
     val parentArtifact =
-      (bld.ruleType, bld.scalaVersion) match {
+      (ruleType, scalaVersion) match {
         case ("scala_test" |
               "scala_bin" |
               "scala_lib", Some(scalaVersion)) =>
@@ -45,7 +44,7 @@ case class Bld(
       }
 
     val parentPath =
-      pomParent.relativize(projectRoot.resolve("parents").resolve(parentArtifact)).toString
+      moduleRoot.relativize(projectRoot.resolve("parents").resolve(parentArtifact)).toString
 
     val pomJavaVersion =
       javaVersion.getOrElse("1.8")

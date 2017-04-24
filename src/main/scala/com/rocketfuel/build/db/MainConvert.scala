@@ -59,7 +59,7 @@ object MainConvert extends App {
 
       val path = modulePaths(bld.id)
       val modulePath = destinationRoot.resolve(path)
-      val pom = bld.pom(bld, identifier, bldDependencies, destinationRoot, modulePath)
+      val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath)
       val pomPath = modulePath.resolve("pom.xml")
 
       if (dry) {

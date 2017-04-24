@@ -9,7 +9,7 @@ SELECT
            WHEN path[1:5] = array['java', 'com', 'rocketfuel', 'server', 'util'] THEN path[2:5]
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN array['com', 'rocketfuel', 'spark']
-           WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN array['com', 'rocketfuel']
+           --WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN array['com', 'rocketfuel']
            ELSE array_append(array['com', 'rocketfuel'], path[1])
       END,
       '.',
@@ -23,7 +23,7 @@ SELECT
            WHEN path[1:5] = array['java', 'com', 'rocketfuel', 'server', 'util'] THEN path[6:array_length(path, 1)]
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN path[5:array_length(path, 1)]
-           WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
+           --WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
            ELSE path[2:array_length(path, 1)]
       END,
       '.',
