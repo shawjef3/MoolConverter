@@ -1,8 +1,9 @@
 package com.rocketfuel.build.db.mool
 
 import java.nio.file.Path
+
 import com.rocketfuel.build.db._
-import com.rocketfuel.build.db.mvn.{Dependency, Identifier}
+import com.rocketfuel.build.db.mvn.{Dependency, Identifier, Parents}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
 
@@ -21,30 +22,11 @@ case class Bld(
 ) {
 
   def pom(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path): Elem = {
-    val parentArtifact =
-      (ruleType, scalaVersion) match {
-        case ("scala_test" |
-              "scala_bin" |
-              "scala_lib", Some(scalaVersion)) =>
-          s"scala-$scalaVersion"
-
-        case ("clojure_lib" |
-              "clojure_bin", _) =>
-          "clojure"
-
-        case ("java_test" |
-              "java_bin" |
-              "java_lib" |
-              "java_proto_lib", _) =>
-          "java"
-
-        case _ =>
-          //TODO: maybe a better default
-          "java"
-      }
+    val parentArtifact = Parents.parent(this)
+    val parentNode = parentArtifact.parentXml(projectRoot, moduleRoot)
 
     val parentPath =
-      moduleRoot.relativize(projectRoot.resolve("parents").resolve(parentArtifact)).toString
+      moduleRoot.relativize(projectRoot.resolve(parentArtifact.pomParent)).toString
 
     val pomJavaVersion =
       javaVersion.getOrElse("1.8")
@@ -56,12 +38,7 @@ case class Bld(
 
       {identifier.mavenDefinition}
 
-      <parent>
-        <groupId>com.rocketfuel.parents</groupId>
-        <artifactId>{parentArtifact}</artifactId>
-        <relativePath>{parentPath}</relativePath>
-        <version>M1</version>
-      </parent>
+      {parentNode}
 
       <dependencies>
         {

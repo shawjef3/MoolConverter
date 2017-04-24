@@ -1,0 +1,55 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>scala-common</artifactId>
+  <version>M1</version>
+  <packaging>pom</packaging>
+
+  <parent>
+    <groupId>com.rocketfuel.parents</groupId>
+    <artifactId>java</artifactId>
+    <version>M1</version>
+    <relativePath>../java</relativePath>
+  </parent>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.2</version>
+        <executions>
+          <execution>
+            <id>scala-compile-first</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <recompileMode>incremental</recompileMode>
+          <useZincServer>true</useZincServer>
+          <args>
+            <arg>-make:transitive</arg>
+            <arg>-dependencyfile</arg>
+            <arg>${project.build.directory}/.scala_dependencies</arg>
+          </args>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <modules>
+    <module>../scala-2.10</module>
+    <module>../scala-2.11</module>
+    <module>../scala-2.12</module>
+  </modules>
+</project>

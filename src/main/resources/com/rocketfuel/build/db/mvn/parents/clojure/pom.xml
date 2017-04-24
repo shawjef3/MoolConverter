@@ -47,4 +47,8 @@
         </dependency>
     </dependencies>
 
+    <modules>
+        $MODULES$
+    </modules>
+
 </project>

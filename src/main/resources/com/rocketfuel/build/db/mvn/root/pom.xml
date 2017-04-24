@@ -1,0 +1,22 @@
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.rocketfuel</groupId>
+  <artifactId>aggregate</artifactId>
+  <version>M1</version>
+  <packaging>pom</packaging>
+
+  <properties>
+    <encoding>UTF-8</encoding>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <modules>
+    <module>
+      parents/java
+    </module>
+    <module>
+      checkstyle
+    </module>
+  </modules>
+</project>

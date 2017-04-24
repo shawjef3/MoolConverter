@@ -6,59 +6,15 @@
     <version>M1</version>
     <packaging>pom</packaging>
 
-    <properties>
-        <encoding>UTF-8</encoding>
-    </properties>
+    <parent>
+        <groupId>com.rocketfuel</groupId>
+        <artifactId>aggregate</artifactId>
+        <version>M1</version>
+        <relativePath>../..</relativePath>
+    </parent>
 
     <build>
         <plugins>
-            <plugin>
-                <!-- The scala plugin gives us an incremental builder for Java. -->
-                <!-- see http://davidb.github.com/scala-maven-plugin -->
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <version>3.2.2</version>
-                <executions>
-                    <execution>
-                        <id>scala-compile-first</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>scala-test-compile</id>
-                        <phase>process-test-resources</phase>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <recompileMode>incremental</recompileMode>
-                    <useZincServer>true</useZincServer>
-                    <args>
-                        <arg>-make:transitive</arg>
-                        <arg>-dependencyfile</arg>
-                        <arg>${project.build.directory}/.scala_dependencies</arg>
-                    </args>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>default-testCompile</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
@@ -108,5 +64,11 @@
             </plugin>
         </plugins>
     </build>
+
+    <modules>
+        <module>../clojure</module>
+        <module>../scala-common</module>
+        $MODULES$
+    </modules>
 
 </project>

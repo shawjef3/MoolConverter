@@ -7,9 +7,9 @@
 
     <parent>
         <groupId>com.rocketfuel.parents</groupId>
-        <artifactId>java</artifactId>
+        <artifactId>scala-common</artifactId>
         <version>M1</version>
-        <relativePath>../java</relativePath>
+        <relativePath>../scala-common</relativePath>
     </parent>
 
     <properties>
@@ -24,5 +24,9 @@
             <version>${scala.version}</version>
         </dependency>
     </dependencies>
+
+    <modules>
+        $MODULES$
+    </modules>
 
 </project>

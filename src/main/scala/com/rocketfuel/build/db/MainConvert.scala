@@ -15,8 +15,6 @@ object MainConvert extends App {
 
   val pomsPath = destinationRoot.resolve("parents")
 
-  Parents.write(pomsPath)
-
   //TODO: delete destinationRoot
   val dbConfig = new HikariConfig()
 
@@ -75,41 +73,20 @@ object MainConvert extends App {
       }
     }
 
-    val aggregatePom =
-      <project xmlns="http://maven.apache.org/POM/4.0.0"
-               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-               xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-        <modelVersion>4.0.0</modelVersion>
-        <groupId>com.rocketfuel</groupId>
-        <artifactId>aggregate</artifactId>
-        <version>9.0.0-SNAPSHOT</version>
-        <packaging>pom</packaging>
+    if (!dry) {
+      Parents.writeRoot(destinationRoot)
+      Parents.writeCheckStyle(destinationRoot)
+      Parents.`Scala-common`.write(destinationRoot, Set())
 
-        <properties>
-          <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-          <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        </properties>
+      val parentPoms =
+        localBlds.foldLeft(Parents.Poms.Empty) {
+          case (poms, bld) =>
+            val moduleRoot = modulePaths(bld.id)
+            poms.add(bld, moduleRoot)
+        }
 
-        <modules>
-          {
-          Parents.modules
-          }
-          {
-          for (bld <- localBlds) yield {
-            val path = modulePaths(bld.id)
-            <module>
-              {path}
-            </module>
-          }
-          }
-        </modules>
-      </project>
-
-    val pomPath =
-      destinationRoot.resolve("pom.xml")
-
-    Files.write(pomPath, aggregatePom.toString.getBytes)
-
+      parentPoms.write(destinationRoot)
+    }
   }
 
 }
