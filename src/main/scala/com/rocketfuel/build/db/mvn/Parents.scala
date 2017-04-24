@@ -2,20 +2,29 @@ package com.rocketfuel.build.db.mvn
 
 import java.nio.file.{Files, Path}
 
-object ParentPoms {
+import scala.xml.Elem
+
+object Parents {
 
   case class File(
     path: String,
     contents: String
   ) {
-    def write(path: Path): Unit = {
-      Files.write(path, contents.getBytes)
+    def write(root: Path): Unit = {
+      val fullPath = root.resolve(path)
+      Files.createDirectories(fullPath.getParent)
+      Files.write(fullPath, contents.getBytes)
     }
+
+    val module: Elem =
+      <module>
+        {"parents/" + path.split('/').head}
+      </module>
   }
 
   object File {
     def load(path: String): File = {
-      val source = io.Source.fromInputStream(getClass.getResourceAsStream(s"poms/$path"))
+      val source = io.Source.fromInputStream(getClass.getResourceAsStream(s"parents/$path"))
       try File(
         path = path,
         contents = source.mkString
@@ -53,5 +62,8 @@ object ParentPoms {
     for (file <- files)
       file.write(path)
   }
+
+  val modules: Set[Elem] =
+    files.map(_.module)
 
 }

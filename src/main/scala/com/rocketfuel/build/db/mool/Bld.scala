@@ -1,9 +1,12 @@
 package com.rocketfuel.build.db.mool
 
+import java.nio.file.Path
+
 import com.rocketfuel.build.db._
 import com.rocketfuel.build.db.mvn.{Dependency, Identifier}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
+
 import scala.xml.Elem
 
 case class Bld(
@@ -18,7 +21,7 @@ case class Bld(
   repoUrl: Option[String] = None
 ) {
 
-  def pom(bld: Bld, identifier: Identifier, dependencies: Vector[Dependency]): Elem = {
+  def pom(bld: Bld, identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, pomParent: Path): Elem = {
     val parentArtifact =
       (bld.ruleType, bld.scalaVersion) match {
         case ("scala_test" |
@@ -41,74 +44,38 @@ case class Bld(
           "java"
       }
 
+    val parentPath =
+      pomParent.relativize(projectRoot.resolve("parents").resolve(parentArtifact)).toString
+
+    val pomJavaVersion =
+      javaVersion.getOrElse("1.8")
+
     <project xmlns="http://maven.apache.org/POM/4.0.0"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-      <modelVersion>4.0.0</modelVersion>{identifier.mavenDefinition}<dependencies>
+      <modelVersion>4.0.0</modelVersion>
+
+      {identifier.mavenDefinition}
 
       <parent>
-        <groupId>com.rocketfuel.poms</groupId>
+        <groupId>com.rocketfuel.parents</groupId>
         <artifactId>{parentArtifact}</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <relativePath>{parentPath}</relativePath>
+        <version>M1</version>
       </parent>
 
-      {for (dependency <- dependencies) yield
-        dependency.mavenDefinition}
-    </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.6.1</version>
-            <configuration>
-              {val j = javaVersion.getOrElse("1.8")
-            <source>
-              {j}
-            </source>
-              <target>
-                {j}
-              </target>}
-            </configuration>
-          </plugin>{scalaVersion match {
-          case None =>
-          case Some(v) =>
-            <plugin>
-              <groupId>net.alchim31.maven</groupId>
-              <artifactId>scala-maven-plugin</artifactId>
-              <version>3.2.2</version>
-              <executions>
-                <execution>
-                  <goals>
-                    <goal>compile</goal>
-                    <goal>testCompile</goal>
-                  </goals>
-                </execution>
-              </executions>
-              <configuration>
-                <scalaVersion>
-                  {v}
-                </scalaVersion>
-              </configuration>
-            </plugin>
-        }}<plugin>
-          <groupId>org.xolstice.maven.plugins</groupId>
-          <artifactId>protobuf-maven-plugin</artifactId>
-          <version>0.5.0</version>
-          <configuration>
-            <protocExecutable>/usr/local/bin/protoc</protocExecutable>
-          </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>compile</goal>
-                <goal>test-compile</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        </plugins>
-      </build>
+      <dependencies>
+        {
+        for (dependency <- dependencies) yield
+          dependency.mavenDefinition
+        }
+      </dependencies>
+
+      <properties>
+        <maven.compiler.source>{pomJavaVersion}</maven.compiler.source>
+        <maven.compiler.target>{pomJavaVersion}</maven.compiler.target>
+      </properties>
+
     </project>
   }
 

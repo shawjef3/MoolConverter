@@ -13,7 +13,9 @@ object MainConvert extends App {
 
   val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
 
-  ParentPoms.write(destinationRoot)
+  val pomsPath = destinationRoot.resolve("parents")
+
+  Parents.write(pomsPath)
 
   //TODO: delete destinationRoot
   val dbConfig = new HikariConfig()
@@ -56,8 +58,9 @@ object MainConvert extends App {
       val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
 
       val path = modulePaths(bld.id)
-      val pom = bld.pom(bld, identifier, bldDependencies)
-      val pomPath = destinationRoot.resolve(path).resolve("pom.xml")
+      val modulePath = destinationRoot.resolve(path)
+      val pom = bld.pom(bld, identifier, bldDependencies, destinationRoot, modulePath)
+      val pomPath = modulePath.resolve("pom.xml")
 
       if (dry) {
         println(identifier)
@@ -67,7 +70,7 @@ object MainConvert extends App {
           println(dependency)
         }
       } else {
-        Files.createDirectories(pomPath.getParent)
+        Files.createDirectories(modulePath)
         Files.write(pomPath, pom.toString.getBytes)
       }
     }
@@ -89,7 +92,10 @@ object MainConvert extends App {
 
         <modules>
           {
-          for {bld <- localBlds} yield {
+          Parents.modules
+          }
+          {
+          for (bld <- localBlds) yield {
             val path = modulePaths(bld.id)
             <module>
               {path}
