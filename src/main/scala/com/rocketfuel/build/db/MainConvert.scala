@@ -7,8 +7,6 @@ import java.nio.file._
 
 object MainConvert extends App {
 
-  val dry = false
-
   val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
 
   val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
@@ -23,17 +21,9 @@ object MainConvert extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-    for (copy <- Copy.all.iterator()) {
-      val source = moolRoot.resolve(copy.source)
-      val destination = destinationRoot.resolve(copy.destination)
-      if (dry) {
-        println(copy)
-        assert(Files.exists(source))
-      } else {
-        Files.createDirectories(destination.getParent)
-        Files.copy(source, destination)
-      }
-    }
+    val copies = Copy.all.vector().toSet
+    val fileCopier = FileCopier.ofCopies(copies, moolRoot, destinationRoot)
+    fileCopier.copyAll()
 
     val modulePaths = {
       for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
@@ -60,35 +50,24 @@ object MainConvert extends App {
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath)
       val pomPath = modulePath.resolve("pom.xml")
 
-      if (dry) {
-        println(identifier)
+      Files.createDirectories(modulePath)
+      Files.write(pomPath, pom.toString.getBytes)
+    }
 
-        for (dependency <- bldDependencies) {
-          print("\t")
-          println(dependency)
-        }
-      } else {
-        Files.createDirectories(modulePath)
-        Files.write(pomPath, pom.toString.getBytes)
+    Parents.writeRoot(destinationRoot)
+    Parents.writeCheckStyle(destinationRoot)
+    Parents.`Scala-common`.write(destinationRoot, Set())
+    Parents.`Scala-2.11`.write(destinationRoot, Set())
+    Parents.`Scala-2.12`.write(destinationRoot, Set())
+
+    val parentPoms =
+      localBlds.foldLeft(Parents.Poms.Empty) {
+        case (poms, bld) =>
+          val moduleRoot = modulePaths(bld.id)
+          poms.add(bld, moduleRoot)
       }
-    }
 
-    if (!dry) {
-      Parents.writeRoot(destinationRoot)
-      Parents.writeCheckStyle(destinationRoot)
-      Parents.`Scala-common`.write(destinationRoot, Set())
-      Parents.`Scala-2.11`.write(destinationRoot, Set())
-      Parents.`Scala-2.12`.write(destinationRoot, Set())
-
-      val parentPoms =
-        localBlds.foldLeft(Parents.Poms.Empty) {
-          case (poms, bld) =>
-            val moduleRoot = modulePaths(bld.id)
-            poms.add(bld, moduleRoot)
-        }
-
-      parentPoms.write(destinationRoot)
-    }
+    parentPoms.write(destinationRoot)
   }
 
 }
