@@ -95,6 +95,8 @@ object Parents {
 
   val Java = Pom.load("parents/java/pom.xml")
 
+  val Protobuf = Pom.load("parents/protobuf/pom.xml")
+
   val `Scala-common` = Pom.load("parents/scala-common/pom.xml")
 
   val `Scala-2.10` = Pom.load("parents/scala-2.10/pom.xml")
@@ -144,9 +146,11 @@ object Parents {
 
       case ("java_test" |
             "java_bin" |
-            "java_lib" |
-            "java_proto_lib", None) =>
+            "java_lib", None) =>
         Java
+
+      case ("java_proto_lib", None) =>
+        Protobuf
 
       case (_, None) =>
         //TODO: maybe a better default

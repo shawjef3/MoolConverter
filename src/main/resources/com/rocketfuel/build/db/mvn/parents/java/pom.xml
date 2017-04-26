@@ -35,22 +35,6 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.5.0</version>
-                <configuration>
-                    <protocExecutable>/usr/local/bin/protoc</protocExecutable>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>test-compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr3-maven-plugin</artifactId>
                 <version>3.5.2</version>
@@ -68,6 +52,7 @@
     <modules>
         <module>../clojure</module>
         <module>../scala-common</module>
+        <module>../protobuf</module>
         $MODULES$
     </modules>
 

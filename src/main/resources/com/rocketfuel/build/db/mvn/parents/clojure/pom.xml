@@ -21,17 +21,38 @@
                 <extensions>true</extensions>
                 <executions>
                     <execution>
-                        <id>compile</id>
+                        <id>default-compile</id>
                         <phase>compile</phase>
                         <goals>
                             <goal>compile</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>test</id>
+                        <id>default-test</id>
                         <phase>test</phase>
                         <goals>
                             <goal>test</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>default-add-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>default-add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>testCompile</goal>
                         </goals>
                     </execution>
                 </executions>

@@ -29,6 +29,7 @@ SELECT
   source,
   module_path || array_to_string(array['', 'src', config_path, lang_path, ''], '/', NULL) ||
   CASE WHEN source LIKE 'java/%' THEN substring(source from 6 for (char_length(source) - 5))
+       WHEN source LIKE 'clojure/%' then substring(source from 8 for (char_length(source) - 7))
        ELSE source
   END AS destination
 FROM dir_parts
