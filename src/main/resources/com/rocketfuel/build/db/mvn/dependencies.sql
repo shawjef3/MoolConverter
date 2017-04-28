@@ -3,6 +3,7 @@ WITH has_duplicates AS (
   SELECT
     bld_to_bld.source_id,
     bld_to_bld.target_id,
+    blds.path AS target_path,
     identifiers.group_id,
     identifiers.artifact_id,
     identifiers.version,
@@ -19,6 +20,7 @@ WITH has_duplicates AS (
   SELECT
     source_id,
     max(target_id) AS target_id,
+    max(target_path) AS target_path,
     group_id,
     artifact_id,
     version,
@@ -27,10 +29,11 @@ WITH has_duplicates AS (
     array_position(array_agg(scope), 'compile') IS NOT NULL AS is_compile
   FROM has_duplicates
   GROUP BY source_id, group_id, artifact_id, version
-)
+), single_scope AS (
 SELECT
   source_id,
   target_id,
+  target_path,
   group_id,
   artifact_id,
   version,
@@ -39,3 +42,23 @@ SELECT
        WHEN is_test THEN 'test'
   END AS scope
 FROM agg_scopes
+)
+SELECT
+  source_id,
+  target_id,
+  group_id,
+  artifact_id,
+  version,
+  scope
+FROM single_scope
+WHERE NOT (group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250'])
+UNION
+SELECT
+  source_id,
+  target_id,
+  'com.google.protobuf',
+  'protobuf-java',
+  '2.5.0',
+  scope
+FROM single_scope
+WHERE group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250']

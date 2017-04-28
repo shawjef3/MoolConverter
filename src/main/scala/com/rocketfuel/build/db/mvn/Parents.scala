@@ -105,6 +105,8 @@ object Parents {
 
   val `Scala-2.12` = Pom.load("parents/scala-2.12/pom.xml")
 
+  val Thrift = Pom.load("parents/thrift/pom.xml")
+
   case class Poms(modules: Map[Pom, Set[String]]) {
     def add(
       bld: Bld,
@@ -151,6 +153,9 @@ object Parents {
 
       case ("java_proto_lib", None) =>
         Protobuf
+
+      case ("java_thrift_lib", None) =>
+        Thrift
 
       case (_, None) =>
         //TODO: maybe a better default

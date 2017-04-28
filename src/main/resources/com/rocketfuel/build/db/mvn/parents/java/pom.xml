@@ -53,6 +53,7 @@
         <module>../clojure</module>
         <module>../scala-common</module>
         <module>../protobuf</module>
+        <module>../thrift</module>
         $MODULES$
     </modules>
 
