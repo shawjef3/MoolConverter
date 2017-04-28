@@ -1,6 +1,7 @@
 package com.rocketfuel.build.db.mvn
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+
 import com.rocketfuel.build.db.mool.Bld
 
 object Parents {
@@ -56,7 +57,7 @@ object Parents {
       val pomPath = projectRoot.resolve(path)
 
       Files.createDirectories(pomPath.getParent)
-      Files.write(pomPath, pom.getBytes)
+      Files.write(pomPath, pom.getBytes, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
     val artifactId =
