@@ -3,6 +3,10 @@ WITH dir_parts AS (
     SELECT
       module_paths.path AS module_path,
       sources.path AS source,
+      CASE WHEN sources.path LIKE 'java/%' THEN substring(sources.path from 6 for (char_length(sources.path) - 5))
+           WHEN sources.path LIKE 'clojure/%' then substring(sources.path from 8 for (char_length(sources.path) - 7))
+           ELSE sources.path
+      END AS package_path,
       CASE WHEN blds.rule_type like '%_test' THEN 'test'
            ELSE 'main'
       END AS config_path,
@@ -27,9 +31,6 @@ WITH dir_parts AS (
 )
 SELECT
   source,
-  module_path || array_to_string(array['', 'src', config_path, lang_path, ''], '/', NULL) ||
-  CASE WHEN source LIKE 'java/%' THEN substring(source from 6 for (char_length(source) - 5))
-       WHEN source LIKE 'clojure/%' then substring(source from 8 for (char_length(source) - 7))
-       ELSE source
-  END AS destination
+  package_path, --this is for imports in proto files
+  array_to_string(array[module_path, 'src', config_path, lang_path, package_path], '/', NULL) AS destination
 FROM dir_parts

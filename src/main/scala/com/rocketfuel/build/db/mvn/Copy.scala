@@ -5,12 +5,13 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 case class Copy(
   source: String,
+  packagePath: String,
   destination: String
 )
 
 object Copy extends Deployable {
   val all =
-    Select[Copy]("SELECT * FROM mvn.copies")
+    Select[Copy]("SELECT source, package_path AS packagePath, destination FROM mvn.copies")
 
   val deployQuery = Ignore.readClassResource(classOf[Identifier], "copies.sql")
 

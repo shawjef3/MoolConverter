@@ -3,19 +3,20 @@ package com.rocketfuel.build.db.mvn
 import java.nio.file.{Files, Path}
 
 /**
-  * Most files can be copied verbatim. However, protoc files
+  * Most files can be copied verbatim. However, protoc files have imports that use the literal path
+  * to dependent protoc files. These paths change with the conversion to maven projects.
   */
 case class FileCopier(
-  copies: Map[String, String],
+  copies: Set[Copy],
   sourceRoot: Path,
   destinationRoot: Path
 ) {
 
   val protoCopies =
-    copies.filter(_._1.endsWith(".proto"))
+    copies.filter(_.source.endsWith(".proto"))
 
   def copyAll(): Unit = {
-    for ((source, destination) <- copies)
+    for (Copy(source, _, destination) <- copies)
       copy(source, destination)
   }
 
@@ -34,27 +35,15 @@ case class FileCopier(
 
     val destinationContents =
       protoCopies.foldLeft(sourceContents) {
-        case (accum, (importSource, importDestination)) =>
-          val importDestinationPath = destinationRoot.resolve(importDestination)
-          val importRelativePath = destination.relativize(importDestinationPath)
-          accum.replace(importSource, importRelativePath.toString)
+        case (accum, Copy(importSource, importPackagePath, _)) =>
+          /*
+          The protoc maven plugin puts the protoc files in the proto_path for us,
+          so we just have to give the path relative to the source root.
+           */
+          accum.replace(importSource, importPackagePath)
       }
 
     Files.write(destination, destinationContents.getBytes)
   }
 
-}
-
-object FileCopier {
-  def ofCopies(
-    copies: Set[Copy],
-    sourceRoot: Path,
-    destinationRoot: Path
-  ): FileCopier = {
-    val fileMap =
-      for (Copy(source, destination) <- copies)
-        yield source -> destination
-
-    FileCopier(fileMap.toMap, sourceRoot, destinationRoot)
-  }
 }

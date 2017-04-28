@@ -2,7 +2,6 @@ package com.rocketfuel.build.db.mvn
 
 import com.rocketfuel.build.db.Deployable
 import com.rocketfuel.sdbc.PostgreSql._
-
 import scala.xml._
 
 case class Dependency(

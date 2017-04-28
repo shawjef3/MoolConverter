@@ -22,7 +22,7 @@ object MainConvert extends App {
 
   pool.withConnection { implicit connection =>
     val copies = Copy.all.vector().toSet
-    val fileCopier = FileCopier.ofCopies(copies, moolRoot, destinationRoot)
+    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
     fileCopier.copyAll()
 
     val modulePaths = {

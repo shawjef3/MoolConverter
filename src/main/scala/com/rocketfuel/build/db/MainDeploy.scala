@@ -25,6 +25,8 @@ object MainDeploy extends App {
     val sqlModel = new com.rocketfuel.build.db.mool.Model(moolModel)
 
     sqlModel.insert()
+
+    Hacks.hack()
   }
 
 }
