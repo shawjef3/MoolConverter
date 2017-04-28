@@ -8,7 +8,7 @@
 
     <parent>
         <groupId>com.rocketfuel</groupId>
-        <artifactId>aggregate</artifactId>
+        <artifactId>vostok-maven</artifactId>
         <version>M1</version>
         <relativePath>../..</relativePath>
     </parent>
