@@ -46,8 +46,6 @@ object Convert {
     Parents.writeRoot(destinationRoot)
     Parents.writeCheckStyle(destinationRoot)
     Parents.`Scala-common`.write(destinationRoot, Set())
-    Parents.`Scala-2.11`.write(destinationRoot, Set())
-    Parents.`Scala-2.12`.write(destinationRoot, Set())
 
     val parentPoms =
       localBlds.foldLeft(Parents.Poms.Empty) {

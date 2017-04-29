@@ -128,7 +128,17 @@ object Parents {
 
   object Poms {
     val Empty =
-      Poms(Map.empty)
+      Poms(
+        Map(
+          Clojure -> Set(),
+          Java -> Set(),
+          Protobuf -> Set(),
+          `Scala-2.10` -> Set(),
+          `Scala-2.11` -> Set(),
+          `Scala-2.12` -> Set(),
+          Thrift -> Set()
+        )
+      )
   }
 
   def parent(bld: Bld): Pom = {
@@ -140,7 +150,7 @@ object Parents {
           case "2.10" =>
             `Scala-2.10`
           case "2.11" =>
-            `Scala-2.10`
+            `Scala-2.11`
           case "2.12" =>
             `Scala-2.12`
         }
