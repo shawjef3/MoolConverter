@@ -9,7 +9,7 @@ SET artifact_id = 'scalatest_2.10'
 WHERE artifact_id = 'scalatest_2.11';
 
 --Some Scala 2.11 projects rely on json4s for Scala 2.10. This is just wrong.
---This is a multistep fix.
+--This is a two step fix.
 --Step 1: create dependencies for json4s_2.11.
 INSERT INTO mool.blds (path, rule_type, group_id, artifact_id, version)
 SELECT
@@ -36,8 +36,8 @@ WHERE
   AND json4s.group_id = 'org.json4s'
   AND json4s.artifact_id LIKE '%_2.11';
 
---Depending on the original brings in a 2 year old version of a class, causing compiling to fail
---for com.rocketfuel.grid:reporting.revenue_capping.driver_lib.
+--The BLD's version brings in a 2 year old version of a class, causing compiling to fail
+--for com.rocketfuel.grid:reporting.revenue_capping.driver_lib and others.
 UPDATE mool.blds
 SET version = '100.24.17'
 WHERE group_id = 'com.rocketfuel.grid.hiveudf'
@@ -51,26 +51,23 @@ WHERE bld_to_sources.bld_id = blds.id
   AND sources.path = 'java/com/rocketfuel/grid/onlinestore/cluster/ClusterType.java';
 
 --Use the cloned grid.modeling. Requires Convert.gridModeling(Path).
--- This fixes  the version of AdScoringInfo to be used during compiling.
+--This fixes  the version of AdScoringInfo to be used during compiling.
 UPDATE mool.blds
 SET version = 'M1'
 WHERE group_id = 'com.rocketfuel.grid.modeling'
   AND artifact_id = 'grid.modeling';
 
---add dependencies for com.rocketfuel.modeling:athena.core.common.CommonTest
-WITH target_ids AS (
-    SELECT id
-    FROM mool.blds target
-    WHERE (group_id = 'com.esotericsoftware.kryo'
-           AND artifact_id = 'kryo'
-          ) OR (
-                group_id = 'org.apache.spark'
-                AND artifact_id = 'spark-assembly_2.10'
-                AND version = '1.6.1'
-          ) OR path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'common', 'JavaSource']
-)
+--Tests using TestSetup shouldn't have to redeclare the dependencies.
+UPDATE mool.bld_to_bld
+SET is_compile = false
+WHERE source_id = (SELECT id FROM mool.blds WHERE path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TestSetup']);
+
+--requires spark
 INSERT INTO mool.bld_to_bld (source_id, target_id, is_compile)
-SELECT source.id, target_ids.id, false
-FROM mool.blds source
-      CROSS JOIN target_ids
-WHERE path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonTest']
+  SELECT source.id, target.id, false
+  FROM mool.blds source
+    CROSS JOIN mool.blds target
+  WHERE source.path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'utils', 'UtilsTest']
+        AND target.group_id = 'org.apache.spark'
+        AND target.artifact_id = 'spark-assembly_2.10'
+        AND target.version = '1.6.1';

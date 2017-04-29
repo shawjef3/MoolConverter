@@ -1,12 +1,10 @@
 package com.rocketfuel.build.db.mool
 
 import java.nio.file.Path
-
 import com.rocketfuel.build.db._
 import com.rocketfuel.build.db.mvn.{Dependency, Identifier, Parents}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
-
 import scala.xml.Elem
 
 case class Bld(
@@ -28,10 +26,15 @@ case class Bld(
     val pomJavaVersion =
       javaVersion.getOrElse("1.8")
 
+    //this helps with finding the bld in postgresql
+    val moolPathComment =
+      xml.Comment("mool path: " + path.mkString("['", "', '", "']"))
+
     <project xmlns="http://maven.apache.org/POM/4.0.0"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <modelVersion>4.0.0</modelVersion>
+      {moolPathComment}
 
       {identifier.mavenDefinition}
 
