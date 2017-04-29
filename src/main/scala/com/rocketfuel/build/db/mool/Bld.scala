@@ -25,9 +25,6 @@ case class Bld(
     val parentArtifact = Parents.parent(this)
     val parentNode = parentArtifact.parentXml(projectRoot, moduleRoot)
 
-    val parentPath =
-      moduleRoot.relativize(projectRoot.resolve(parentArtifact.pomParent)).toString
-
     val pomJavaVersion =
       javaVersion.getOrElse("1.8")
 

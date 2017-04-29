@@ -25,4 +25,6 @@ object MainConvert extends App {
     Convert.poms(destinationRoot)
   }
 
+  Convert.gridModeling(destinationRoot)
+
 }

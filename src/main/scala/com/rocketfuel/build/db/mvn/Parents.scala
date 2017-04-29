@@ -14,6 +14,8 @@ object Parents {
 
   val root = loadResource("root/pom.xml")
 
+  val modelingCommon = loadResource("grid.modeling/pom.xml")
+
   def writeRoot(projectRoot: Path): Unit = {
     val pomPath = projectRoot.resolve("pom.xml")
     Files.write(pomPath, root.getBytes)
@@ -57,7 +59,7 @@ object Parents {
       val pomPath = projectRoot.resolve(path)
 
       Files.createDirectories(pomPath.getParent)
-      Files.write(pomPath, pom.getBytes, StandardOpenOption.TRUNCATE_EXISTING)
+      Files.write(pomPath, pom.getBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
     val artifactId =
@@ -162,6 +164,11 @@ object Parents {
         //TODO: maybe a better default
         Java
     }
+  }
+
+  def writeModelingCommon(projectRoot: Path): Unit = {
+    val pomPath = projectRoot.resolve("grid/modeling/pom.xml")
+    Files.write(pomPath, modelingCommon.getBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
   }
 
 }

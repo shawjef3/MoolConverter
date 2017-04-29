@@ -15,21 +15,10 @@ case class Dependency(
 
   lazy val mavenDefinition: Elem =
     <dependency>
-      <groupId>
-        {groupId}
-      </groupId>
-      <artifactId>
-        {artifactId}
-      </artifactId>
-      <version>
-        {version}
-      </version>
-      {
-      if (scope != "compile")
-        <scope>
-          {scope}
-        </scope>
-      }
+      <groupId>{groupId}</groupId>
+      <artifactId>{artifactId}</artifactId>
+      <version>{version}</version>
+      <scope>{scope}</scope>
     </dependency>
 
 }

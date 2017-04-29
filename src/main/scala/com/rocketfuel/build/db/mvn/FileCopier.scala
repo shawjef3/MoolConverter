@@ -1,6 +1,6 @@
 package com.rocketfuel.build.db.mvn
 
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, StandardCopyOption}
 
 /**
   * Most files can be copied verbatim. However, protoc files have imports that use the literal path
@@ -27,7 +27,7 @@ case class FileCopier(
     Files.createDirectories(destinationPath.getParent)
     if (source.endsWith(".proto"))
       copyProto(sourcePath, destinationPath)
-    else Files.copy(sourcePath, destinationPath)
+    else Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING)
   }
 
   protected def copyProto(source: Path, destination: Path): Unit = {

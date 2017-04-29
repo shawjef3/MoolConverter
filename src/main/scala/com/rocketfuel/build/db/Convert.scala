@@ -1,7 +1,6 @@
 package com.rocketfuel.build.db
 
 import java.nio.file.{Files, Path, StandardOpenOption}
-
 import com.rocketfuel.build.db.mvn.{Copy, FileCopier, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
@@ -41,7 +40,7 @@ object Convert {
       val pomPath = modulePath.resolve("pom.xml")
 
       Files.createDirectories(modulePath)
-      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING)
+      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 
     Parents.writeRoot(destinationRoot)
@@ -58,6 +57,20 @@ object Convert {
       }
 
     parentPoms.write(destinationRoot)
+  }
+
+  def gridModeling(destinationRoot: Path): Unit = {
+    val modelingRoot = destinationRoot.resolve("grid/modeling")
+    sys.process.Process("git", Seq("clone", "ssh://git.rfiserve.net:29418/grid/modeling", modelingRoot.toAbsolutePath.toString)).!
+
+    val checkstyle = modelingRoot.resolve("checkstyle.xml")
+
+    val checkstyleContents = new String(Files.readAllBytes(checkstyle))
+    val fixedCheckstyleContents = checkstyleContents.replace("<property name=\"file\" value=\"checkstyle-suppressions.xml\"/>", "<property name=\"file\" value=\"grid/modeling/checkstyle-suppressions.xml\"/>")
+
+    Files.write(checkstyle, fixedCheckstyleContents.getBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+
+    Parents.writeModelingCommon(destinationRoot)
   }
 
 }
