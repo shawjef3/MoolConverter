@@ -53,6 +53,9 @@
         <configuration>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
+          <environmentVariables>
+            <BUILD_ROOT>/Users/jshaw/git/data/vostok</BUILD_ROOT>
+          </environmentVariables>
         </configuration>
         <executions>
           <execution>

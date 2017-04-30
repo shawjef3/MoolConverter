@@ -45,7 +45,6 @@ FROM agg_scopes
 )
 SELECT
   source_id,
-  target_id,
   group_id,
   artifact_id,
   version,
@@ -55,10 +54,12 @@ WHERE NOT (group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn
 UNION
 SELECT
   source_id,
-  target_id,
   'com.google.protobuf',
   'protobuf-java',
   '2.5.0',
   scope
 FROM single_scope
 WHERE group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250']
+UNION
+SELECT source_id, group_id, artifact_id, version, scope
+FROM mvn.dependency_supplements

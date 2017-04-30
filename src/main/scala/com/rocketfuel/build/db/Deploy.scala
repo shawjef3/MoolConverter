@@ -22,6 +22,7 @@ object Deploy extends Deployable {
       mvn.ModulePath,
       mvn.Copy,
       mvn.Identifier,
+      mvn.DependencySupplements,
       mvn.Dependency
     ).fold(Deployable.empty)(_ + _)
 

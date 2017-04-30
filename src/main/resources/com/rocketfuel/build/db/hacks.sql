@@ -61,13 +61,3 @@ WHERE group_id = 'com.rocketfuel.grid.modeling'
 UPDATE mool.bld_to_bld
 SET is_compile = false
 WHERE source_id = (SELECT id FROM mool.blds WHERE path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TestSetup']);
-
---requires spark
-INSERT INTO mool.bld_to_bld (source_id, target_id, is_compile)
-  SELECT source.id, target.id, false
-  FROM mool.blds source
-    CROSS JOIN mool.blds target
-  WHERE source.path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'utils', 'UtilsTest']
-        AND target.group_id = 'org.apache.spark'
-        AND target.artifact_id = 'spark-assembly_2.10'
-        AND target.version = '1.6.1';

@@ -6,7 +6,6 @@ import scala.xml._
 
 case class Dependency(
   sourceId: Int,
-  targetId: Int,
   groupId: String,
   artifactId: String,
   version: String,
@@ -25,7 +24,7 @@ case class Dependency(
 
 object Dependency extends Deployable {
   val list =
-    Select[Dependency]("SELECT source_id sourceId, target_id targetId, group_id groupId, artifact_id artifactId, version, scope FROM mvn.dependencies")
+    Select[Dependency]("SELECT source_id sourceId, group_id groupId, artifact_id artifactId, version, scope FROM mvn.dependencies")
 
   val selectBySourceId =
     Select[Dependency](list.queryText + " WHERE source_id = @sourceId")
