@@ -10,7 +10,7 @@ WITH RECURSIVE recursive_dependencies (
     group_id,
     artifact_id,
     version,
-    classifier
+    type
 ) AS (
   --The immediate dependency's compile dependencies.
   SELECT
@@ -19,7 +19,7 @@ WITH RECURSIVE recursive_dependencies (
     target_dependencies.group_id,
     target_dependencies.artifact_id,
     target_dependencies.version,
-    target_dependencies.classifier
+    target_dependencies.type
   FROM mool.blds source --source is the test bld
   INNER JOIN mvn.dependencies source_dependencies
     ON source.id = source_dependencies.source_id
@@ -37,7 +37,7 @@ WITH RECURSIVE recursive_dependencies (
     target_target_dependencies.group_id,
     target_target_dependencies.artifact_id,
     target_target_dependencies.version,
-    target_target_dependencies.classifier
+    target_target_dependencies.type
   FROM recursive_dependencies source
   INNER JOIN mvn.dependencies target_dependencies
     ON source.target_id = target_dependencies.source_id
@@ -51,6 +51,6 @@ SELECT
   artifact_id,
   version,
   'compile' AS scope, --could be 'test', but that wouldn't be transitive
-  classifier
+  type
 FROM recursive_dependencies
 WHERE group_id IS NOT NULL

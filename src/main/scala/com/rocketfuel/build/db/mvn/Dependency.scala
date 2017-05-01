@@ -10,7 +10,7 @@ case class Dependency(
   artifactId: String,
   version: String,
   scope: String,
-  classifier: Option[String]
+  `type`: Option[String]
 ) {
 
   lazy val mavenDefinition: Elem =
@@ -20,8 +20,8 @@ case class Dependency(
       <version>{version}</version>
       <scope>{scope}</scope>
       {
-        if (classifier.contains("test"))
-          <type>test-jar</type>
+        if (`type`.isDefined)
+          <type>{`type`.get}</type>
       }
     </dependency>
 
@@ -29,27 +29,26 @@ case class Dependency(
 
 object Dependency extends Deployable {
   val list =
-    Select[Dependency](
-      """SELECT source_id::int sourceId, group_id::text groupId, artifact_id::text artifactId, version::text, scope::text, classifier::text FROM mvn.dependencies
-        |UNION
-        |SELECT source_id::int sourceId, group_id::text groupId, artifact_id::text artifactId, version::text, scope::text, classifier::text FROM mvn.provided_dependencies
-      """.stripMargin
-    )
+    Select[Dependency]("SELECT source_id sourceId, group_id groupId, artifact_id artifactId, version, scope, type FROM mvn.all_dependencies")
 
   val selectBySourceId =
-    Select[Dependency](list.queryText + " WHERE source_id = @sourceId")
+    Select[Dependency](list.originalQueryText + " WHERE source_id = @sourceId")
 
   val deployDependenciesQuery = Ignore.readClassResource(classOf[Dependency], "dependencies.sql")
 
   val deployProvidedDependenciesQuery = Ignore.readClassResource(classOf[Dependency], "provided_dependencies.sql")
 
+  val deployAllDependenciesQuery = Ignore.readClassResource(classOf[Dependency], "all_dependencies.sql")
+
   override def deploy()(implicit connection: Connection): Unit = {
     deployDependenciesQuery.ignore()
     deployProvidedDependenciesQuery.ignore()
+    deployAllDependenciesQuery.ignore()
   }
 
   override def undeploy()(implicit connection: Connection): Unit = {
     Ignore.ignore("DROP VIEW IF EXISTS mvn.dependencies CASCADE")
     Ignore.ignore("DROP VIEW IF EXISTS mvn.provided_dependencies CASCADE")
+    Ignore.ignore("DROP VIEW IF EXISTS mvn.all_dependencies CASCADE")
   }
 }

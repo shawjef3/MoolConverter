@@ -5,5 +5,5 @@ CREATE TABLE mvn.dependency_supplements (
   artifact_id text NOT NULL,
   version text NOT NULL,
   scope text NOT NULL,
-  classifier text
+  type text
 )

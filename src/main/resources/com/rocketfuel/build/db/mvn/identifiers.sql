@@ -6,7 +6,6 @@ SELECT
     group_id,
     array_to_string(
       CASE WHEN path[1:3] = array['java', 'com', 'rocketfuel'] THEN path[2:4]
-           WHEN path[1:5] = array['java', 'com', 'rocketfuel', 'server', 'util'] THEN path[2:5]
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN array['com', 'rocketfuel', 'spark']
            WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN array['com', 'rocketfuel', 'clojure']
@@ -20,7 +19,6 @@ SELECT
     artifact_id,
     array_to_string(
       CASE WHEN path[1:3] = array['java', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
-           WHEN path[1:5] = array['java', 'com', 'rocketfuel', 'server', 'util'] THEN path[4:array_length(path, 1)]
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN path[5:array_length(path, 1)]
            WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
@@ -31,7 +29,7 @@ SELECT
     )
   ) AS artifact_id,
   coalesce(version, 'M1') AS version,
-  classifier
+  CASE WHEN rule_type LIKE '%test' OR classifier = 'tests' THEN 'test-jar' END AS type
   FROM mool.blds
 )
 SELECT
@@ -39,6 +37,6 @@ SELECT
   group_id,
   artifact_id,
   version,
-  classifier
+  type
 FROM base
-GROUP BY bld_id, group_id, artifact_id, version, classifier
+GROUP BY bld_id, group_id, artifact_id, version, type

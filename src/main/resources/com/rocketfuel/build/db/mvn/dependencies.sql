@@ -11,11 +11,7 @@ WITH has_duplicates AS (
          WHEN bld_to_bld.is_compile THEN 'provided'
          ELSE 'compile'
     END AS scope,
-    coalesce(
-      identifiers.classifier,
-      --If the dependency is a test project, the classifier must be 'test'.
-      CASE WHEN target.rule_type LIKE '%test' THEN 'test' END
-    ) AS classifier
+    identifiers.type
   FROM mool.bld_to_bld
   INNER JOIN mool.blds source
     ON bld_to_bld.source_id = source.id
@@ -34,9 +30,9 @@ WITH has_duplicates AS (
     array_position(array_agg(scope), 'provided') IS NOT NULL AS is_provided,
     array_position(array_agg(scope), 'test') IS NOT NULL AS is_test,
     array_position(array_agg(scope), 'compile') IS NOT NULL AS is_compile,
-    classifier
+    type
   FROM has_duplicates
-  GROUP BY source_id, group_id, artifact_id, version, classifier
+  GROUP BY source_id, group_id, artifact_id, version, type
 ), single_scope AS (
 SELECT
   source_id,
@@ -49,7 +45,7 @@ SELECT
        WHEN is_compile THEN 'compile'
        WHEN is_provided THEN 'provided'
   END AS scope,
-  classifier
+  type
 FROM agg_scopes
 )
 SELECT
@@ -59,7 +55,7 @@ SELECT
   artifact_id,
   version,
   scope,
-  classifier
+  type
 FROM single_scope
 WHERE NOT (group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250'])
 UNION
@@ -70,9 +66,9 @@ SELECT
   'protobuf-java',
   '2.5.0',
   scope,
-  classifier
+  type
 FROM single_scope
 WHERE group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250']
 UNION
-SELECT source_id, NULL, group_id, artifact_id, version, scope, classifier
+SELECT source_id, NULL, group_id, artifact_id, version, scope, type
 FROM mvn.dependency_supplements
