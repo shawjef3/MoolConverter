@@ -19,8 +19,8 @@ SELECT
   coalesce(
     artifact_id,
     array_to_string(
-      CASE WHEN path[1:3] = array['java', 'com', 'rocketfuel'] THEN path[5:array_length(path, 1)]
-           WHEN path[1:5] = array['java', 'com', 'rocketfuel', 'server', 'util'] THEN path[6:array_length(path, 1)]
+      CASE WHEN path[1:3] = array['java', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
+           WHEN path[1:5] = array['java', 'com', 'rocketfuel', 'server', 'util'] THEN path[4:array_length(path, 1)]
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN path[5:array_length(path, 1)]
            WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
@@ -30,13 +30,15 @@ SELECT
       NULL
     )
   ) AS artifact_id,
-  coalesce(version, 'M1') AS version
+  coalesce(version, 'M1') AS version,
+  classifier
   FROM mool.blds
 )
 SELECT
   bld_id,
   group_id,
   artifact_id,
-  version
+  version,
+  classifier
 FROM base
-GROUP BY bld_id, group_id, artifact_id, version
+GROUP BY bld_id, group_id, artifact_id, version, classifier

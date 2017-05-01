@@ -4,5 +4,6 @@ CREATE TABLE mvn.dependency_supplements (
   group_id text NOT NULL,
   artifact_id text NOT NULL,
   version text NOT NULL,
-  scope text NOT NULL
+  scope text NOT NULL,
+  classifier text
 )

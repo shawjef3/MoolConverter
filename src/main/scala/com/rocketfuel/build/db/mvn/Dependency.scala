@@ -9,7 +9,8 @@ case class Dependency(
   groupId: String,
   artifactId: String,
   version: String,
-  scope: String
+  scope: String,
+  classifier: Option[String]
 ) {
 
   lazy val mavenDefinition: Elem =
@@ -18,22 +19,37 @@ case class Dependency(
       <artifactId>{artifactId}</artifactId>
       <version>{version}</version>
       <scope>{scope}</scope>
+      {
+        if (classifier.contains("test"))
+          <type>test-jar</type>
+      }
     </dependency>
 
 }
 
 object Dependency extends Deployable {
   val list =
-    Select[Dependency]("SELECT source_id sourceId, group_id groupId, artifact_id artifactId, version, scope FROM mvn.dependencies")
+    Select[Dependency](
+      """SELECT source_id::int sourceId, group_id::text groupId, artifact_id::text artifactId, version::text, scope::text, classifier::text FROM mvn.dependencies
+        |UNION
+        |SELECT source_id::int sourceId, group_id::text groupId, artifact_id::text artifactId, version::text, scope::text, classifier::text FROM mvn.provided_dependencies
+      """.stripMargin
+    )
 
   val selectBySourceId =
     Select[Dependency](list.queryText + " WHERE source_id = @sourceId")
 
-  val deployQuery = Ignore.readClassResource(classOf[Dependency], "dependencies.sql")
+  val deployDependenciesQuery = Ignore.readClassResource(classOf[Dependency], "dependencies.sql")
 
-  override def deploy()(implicit connection: Connection): Unit =
-    deployQuery.ignore()
+  val deployProvidedDependenciesQuery = Ignore.readClassResource(classOf[Dependency], "provided_dependencies.sql")
 
-  override def undeploy()(implicit connection: Connection): Unit =
+  override def deploy()(implicit connection: Connection): Unit = {
+    deployDependenciesQuery.ignore()
+    deployProvidedDependenciesQuery.ignore()
+  }
+
+  override def undeploy()(implicit connection: Connection): Unit = {
     Ignore.ignore("DROP VIEW IF EXISTS mvn.dependencies CASCADE")
+    Ignore.ignore("DROP VIEW IF EXISTS mvn.provided_dependencies CASCADE")
+  }
 }

@@ -23,7 +23,7 @@ object Deploy extends Deployable {
       mvn.Copy,
       mvn.Identifier,
       mvn.DependencySupplements,
-      mvn.Dependency
+      mvn.Dependency,
     ).fold(Deployable.empty)(_ + _)
 
   override def deploy()(implicit connection: Connection): Unit =

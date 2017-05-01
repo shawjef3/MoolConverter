@@ -3,11 +3,6 @@ UPDATE mool.blds
 SET artifact_id = 'json4s-native_2.10'
 WHERE artifact_id = 'json4s-native_2.9.2';
 
---this is just wrong
-UPDATE mool.blds
-SET artifact_id = 'scalatest_2.10'
-WHERE artifact_id = 'scalatest_2.11';
-
 --Some Scala 2.11 projects rely on json4s for Scala 2.10. This is just wrong.
 --This is a two step fix.
 --Step 1: create dependencies for json4s_2.11.
@@ -56,8 +51,3 @@ UPDATE mool.blds
 SET version = 'M1'
 WHERE group_id = 'com.rocketfuel.grid.modeling'
   AND artifact_id = 'grid.modeling';
-
---Tests using TestSetup shouldn't have to redeclare the dependencies.
-UPDATE mool.bld_to_bld
-SET is_compile = false
-WHERE source_id = (SELECT id FROM mool.blds WHERE path = ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TestSetup']);

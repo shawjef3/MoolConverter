@@ -4,7 +4,7 @@ organization := "com.rocketfuel.build.mool"
 
 version := "0.0"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.2"
 
 libraryDependencies ++= Seq(
   "commons-io" % "commons-io" % "2.5",

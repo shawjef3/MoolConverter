@@ -100,7 +100,8 @@ object Bld {
     artifact_id: String,
     group_id: String,
     version: String,
-    repo_url: String
+    repo_url: String,
+    classifier: Option[String]
   )
 
   object MavenSpecs {

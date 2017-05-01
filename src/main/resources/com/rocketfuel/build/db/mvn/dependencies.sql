@@ -3,17 +3,24 @@ WITH has_duplicates AS (
   SELECT
     bld_to_bld.source_id,
     bld_to_bld.target_id,
-    blds.path AS target_path,
+    target.path AS target_path,
     identifiers.group_id,
     identifiers.artifact_id,
     identifiers.version,
-    CASE WHEN blds.rule_type like '%_test' THEN 'test' --BLDs only have one scope
+    CASE WHEN source.rule_type LIKE '%test' THEN 'compile' --could be 'test', but that wouldn't be transitive
          WHEN bld_to_bld.is_compile THEN 'provided'
          ELSE 'compile'
-    END AS scope
+    END AS scope,
+    coalesce(
+      identifiers.classifier,
+      --If the dependency is a test project, the classifier must be 'test'.
+      CASE WHEN target.rule_type LIKE '%test' THEN 'test' END
+    ) AS classifier
   FROM mool.bld_to_bld
-  INNER JOIN mool.blds
-    ON bld_to_bld.target_id = blds.id
+  INNER JOIN mool.blds source
+    ON bld_to_bld.source_id = source.id
+  INNER JOIN mool.blds target
+    ON bld_to_bld.target_id = target.id
   INNER JOIN mvn.identifiers
     ON identifiers.bld_id = bld_to_bld.target_id
 ), agg_scopes AS (
@@ -26,9 +33,10 @@ WITH has_duplicates AS (
     version,
     array_position(array_agg(scope), 'provided') IS NOT NULL AS is_provided,
     array_position(array_agg(scope), 'test') IS NOT NULL AS is_test,
-    array_position(array_agg(scope), 'compile') IS NOT NULL AS is_compile
+    array_position(array_agg(scope), 'compile') IS NOT NULL AS is_compile,
+    classifier
   FROM has_duplicates
-  GROUP BY source_id, group_id, artifact_id, version
+  GROUP BY source_id, group_id, artifact_id, version, classifier
 ), single_scope AS (
 SELECT
   source_id,
@@ -37,29 +45,34 @@ SELECT
   group_id,
   artifact_id,
   version,
-  CASE WHEN is_compile THEN 'compile'
+  CASE WHEN is_test THEN 'compile' --could be 'test', but that wouldn't be transitive
+       WHEN is_compile THEN 'compile'
        WHEN is_provided THEN 'provided'
-       WHEN is_test THEN 'test'
-  END AS scope
+  END AS scope,
+  classifier
 FROM agg_scopes
 )
 SELECT
   source_id,
+  target_id,
   group_id,
   artifact_id,
   version,
-  scope
+  scope,
+  classifier
 FROM single_scope
 WHERE NOT (group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250'])
 UNION
 SELECT
   source_id,
+  target_id,
   'com.google.protobuf',
   'protobuf-java',
   '2.5.0',
-  scope
+  scope,
+  classifier
 FROM single_scope
 WHERE group_id = 'com.rocketfuel.java' AND target_path = array['java', 'mvn', 'com', 'google', 'protobuf', 'ProtobufJava250']
 UNION
-SELECT source_id, group_id, artifact_id, version, scope
+SELECT source_id, NULL, group_id, artifact_id, version, scope, classifier
 FROM mvn.dependency_supplements

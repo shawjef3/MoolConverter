@@ -16,7 +16,8 @@ case class Bld(
   groupId: Option[String] = None,
   artifactId: Option[String] = None,
   version: Option[String] = None,
-  repoUrl: Option[String] = None
+  repoUrl: Option[String] = None,
+  classifier: Option[String] = None
 ) {
 
   def pom(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path): Elem = {
@@ -70,7 +71,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       "group_id" -> "groupId",
       "artifact_id" -> "artifactId",
       "version" -> "version",
-      "repo_url" -> "repoUr"
+      "repo_url" -> "repoUr",
+      "classifier" -> "classifier"
     )
 
   private val selectList = {
@@ -99,7 +101,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         |  group_id text,
         |  artifact_id text,
         |  version text,
-        |  repo_url text
+        |  repo_url text,
+        |  classifier text
         |)
         |""".stripMargin
     )
@@ -116,7 +119,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  group_id,
       |  artifact_id,
       |  version,
-      |  repo_url
+      |  repo_url,
+      |  classifier
       |) VALUES (
       |  @path,
       |  @ruleType,
@@ -125,7 +129,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  @groupId,
       |  @artifactId,
       |  @version,
-      |  @repoUrl
+      |  @repoUrl,
+      |  @classifier
       |) RETURNING id
       |""".stripMargin
 
@@ -140,7 +145,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         artifactId = bld.maven_specs.map(_.artifact_id),
         groupId = bld.maven_specs.map(_.group_id),
         version = bld.maven_specs.map(_.version),
-        repoUrl = bld.maven_specs.map(_.repo_url)
+        repoUrl = bld.maven_specs.map(_.repo_url),
+        classifier = bld.maven_specs.flatMap(_.classifier)
       )
     )
   }
