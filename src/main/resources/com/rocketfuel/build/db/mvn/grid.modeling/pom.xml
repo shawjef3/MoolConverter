@@ -22,12 +22,7 @@
     <jdkName>JDK 1.7</jdkName>
     <compileSource>1.7</compileSource>
 
-    <common.message.version>[102.18.0,102.19.0)</common.message.version>
-    <mobile.common.version>[101.61.0,101.62.0)</mobile.common.version>
-    <modeling.common.version>[102.55.0,102.56.0)</modeling.common.version>
-    <grid.common.version>[107.47.2, 107.48.0)</grid.common.version>
     <grid.profileupdater.version>[101.41.0,101.42.0)</grid.profileupdater.version>
-    <grid.onlinestore.version>[112.1.1,112.2.0)</grid.onlinestore.version>
     <grid.thirdparty.hbase.version>[1.1.4.255,1.1.5)</grid.thirdparty.hbase.version>
     <grid.thirdparty.hive.version>[0.13.1.0, 0.14.0.0)</grid.thirdparty.hive.version>
     <hadoop.version>2.6.4.1</hadoop.version>
@@ -38,6 +33,11 @@
 
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>com.rocketfuel.server</groupId>
+      <artifactId>server.util.IOUtils</artifactId>
+      <version>M1</version>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
@@ -54,9 +54,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.rocketfuel.grid.onlinestore</groupId>
-      <artifactId>grid.onlinestore</artifactId>
-      <version>${grid.onlinestore.version}</version>
+      <groupId>com.rocketfuel.grid</groupId>
+      <artifactId>grid.onlinestore.OnlineStore</artifactId>
+      <version>M1</version>
     </dependency>
     <dependency>
       <groupId>de.bwaldvogel</groupId>
@@ -64,19 +64,19 @@
       <version>1.95</version>
     </dependency>
     <dependency>
-      <groupId>com.rocketfuel.grid.common</groupId>
-      <artifactId>grid.common</artifactId>
-      <version>${grid.common.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.rocketfuel.mobile</groupId>
-      <artifactId>common.MobileCommon</artifactId>
+      <groupId>com.rocketfuel.grid</groupId>
+      <artifactId>grid.common.GridCommon</artifactId>
       <version>M1</version>
     </dependency>
     <dependency>
-      <groupId>com.rocketfuel.modeling.common</groupId>
-      <artifactId>modeling.common</artifactId>
-      <version>${modeling.common.version}</version>
+      <groupId>com.rocketfuel.mobile</groupId>
+      <artifactId>mobile.common.MobileCommon</artifactId>
+      <version>M1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.rocketfuel.modeling</groupId>
+      <artifactId>modeling.common.ModelingCommon</artifactId>
+      <version>M1</version>
     </dependency>
     <dependency>
       <groupId>org.ostermiller</groupId>
@@ -239,7 +239,7 @@
     </dependency>
     <dependency>
       <groupId>com.rocketfuel.common</groupId>
-      <artifactId>message.CommonMessage</artifactId>
+      <artifactId>common.message.CommonMessage</artifactId>
       <version>M1</version>
     </dependency>
     <dependency>
@@ -260,7 +260,7 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>2.10.3</version>
+      <version>2.10.6</version>
     </dependency>
     <dependency>
       <groupId>mysql</groupId>
@@ -293,6 +293,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.0.0</version>
         <executions>
           <execution>
             <id>make-assembly</id>

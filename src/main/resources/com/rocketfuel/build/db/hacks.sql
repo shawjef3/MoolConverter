@@ -33,10 +33,10 @@ WHERE
 
 --The BLD's version brings in a 2 year old version of a class, causing compiling to fail
 --for com.rocketfuel.grid:reporting.revenue_capping.driver_lib and others.
-UPDATE mool.blds
-SET version = '100.24.17'
-WHERE group_id = 'com.rocketfuel.grid.hiveudf'
-  AND artifact_id = 'grid.hiveudf';
+-- UPDATE mool.blds
+-- SET version = '100.24.17'
+-- WHERE group_id = 'com.rocketfuel.grid.hiveudf'
+--   AND artifact_id = 'grid.hiveudf';
 
 --reverse "# Hack as empty sources not allowed."
 DELETE FROM mool.bld_to_sources
@@ -51,3 +51,33 @@ UPDATE mool.blds
 SET version = 'M1'
 WHERE group_id = 'com.rocketfuel.grid.modeling'
   AND artifact_id = 'grid.modeling';
+
+--This dependency causes a duplicate of ModelingConstants to be on the classpath.
+-- DELETE FROM mool.bld_to_bld
+-- WHERE source_id = (
+--   SELECT id
+--   FROM mool.blds
+--   WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
+-- ) AND target_id = (
+--   SELECT id
+--   FROM mool.blds
+--   WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'ModelingCommonWithExclusions']
+-- );
+
+--This dependency causes a duplicate of BrscFromRtbidsExtractor to be on the classpath.
+--It should use the same class as the upstream modules.
+-- UPDATE mool.bld_to_bld
+-- SET target_id = (
+--     SELECT id
+--     FROM mool.blds
+--     WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'common', 'JavaSource']
+-- )
+-- WHERE source_id = (
+--   SELECT id
+--   FROM mool.blds
+--   WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'common', 'FeatureUtils']
+-- ) AND target_id = (
+--   SELECT id
+--   FROM mool.blds
+--   WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'common', 'BidRequestScoringContext']
+-- );

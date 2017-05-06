@@ -20,7 +20,7 @@ WITH RECURSIVE recursive_dependencies (
     target_dependencies.artifact_id,
     target_dependencies.version,
     target_dependencies.type
-  FROM mool.blds source --source is the test bld
+  FROM mool_dedup.blds source --source is the test bld
   INNER JOIN mvn.dependencies source_dependencies
     ON source.id = source_dependencies.source_id
   LEFT OUTER JOIN mvn.dependencies target_dependencies --targets are the upstream blds

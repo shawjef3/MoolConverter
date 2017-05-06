@@ -1,5 +1,6 @@
 package com.rocketfuel.build.db
 
+import com.rocketfuel.build.db.mvn.Parents
 import com.rocketfuel.sdbc.PostgreSql._
 import com.zaxxer.hikari.HikariConfig
 import java.nio.file._
@@ -20,5 +21,9 @@ object MainPoms extends App {
   pool.withConnection { implicit connection =>
     Convert.poms(destinationRoot)
   }
+
+  Parents.writeModelingCommon(destinationRoot)
+
+  Parents.writeRoot(destinationRoot)
 
 }

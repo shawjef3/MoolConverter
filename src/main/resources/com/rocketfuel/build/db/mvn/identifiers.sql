@@ -9,6 +9,7 @@ SELECT
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN array['com', 'rocketfuel', 'spark']
            WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN array['com', 'rocketfuel', 'clojure']
+           WHEN path[1] = 'grid' THEN array['com', 'rocketfuel', 'grid2']
            ELSE array_append(array['com', 'rocketfuel'], path[1])
       END,
       '.',
@@ -22,6 +23,7 @@ SELECT
            --for BLDs in java/org/apache/spark
            WHEN path[1:4] = array['java', 'org', 'apache', 'spark'] THEN path[5:array_length(path, 1)]
            WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
+           WHEN path[1] = 'grid' THEN array_prepend('grid2', path[2:array_length(path, 1)])
            ELSE path[2:array_length(path, 1)]
       END,
       '.',
@@ -30,7 +32,7 @@ SELECT
   ) AS artifact_id,
   coalesce(version, 'M1') AS version,
   CASE WHEN rule_type LIKE '%test' OR classifier = 'tests' THEN 'test-jar' END AS type
-  FROM mool.blds
+  FROM mool_dedup.blds
 )
 SELECT
   bld_id,

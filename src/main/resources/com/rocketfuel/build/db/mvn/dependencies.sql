@@ -12,10 +12,10 @@ WITH has_duplicates AS (
          ELSE 'compile'
     END AS scope,
     identifiers.type
-  FROM mool.bld_to_bld
-  INNER JOIN mool.blds source
+  FROM mool_dedup.bld_to_bld
+  INNER JOIN mool_dedup.blds source
     ON bld_to_bld.source_id = source.id
-  INNER JOIN mool.blds target
+  INNER JOIN mool_dedup.blds target
     ON bld_to_bld.target_id = target.id
   INNER JOIN mvn.identifiers
     ON identifiers.bld_id = bld_to_bld.target_id

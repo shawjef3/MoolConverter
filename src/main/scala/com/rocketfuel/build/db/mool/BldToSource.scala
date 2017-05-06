@@ -25,7 +25,7 @@ object BldToSource extends Deployable with InsertableToValue[BldToSource] with S
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("DROP TABLE IF EXISTS mool.bld_to_sources")
+    Ignore.ignore("DROP TABLE IF EXISTS mool.bld_to_sources CASCADE")
 
   override val insertSql: CompiledStatement =
     """INSERT INTO mool.bld_to_sources (

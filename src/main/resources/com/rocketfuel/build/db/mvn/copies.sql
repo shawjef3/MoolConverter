@@ -5,6 +5,7 @@ WITH dir_parts AS (
       sources.path AS source,
       CASE WHEN sources.path LIKE 'java/%' THEN substring(sources.path from 6 for (char_length(sources.path) - 5))
            WHEN sources.path LIKE 'clojure/%' then substring(sources.path from 8 for (char_length(sources.path) - 7))
+           WHEN sources.path LIKE 'grid/%' THEN 'grid2' || substring(sources.path from 5 for (char_length(sources.path)) - 4)
            ELSE sources.path
       END AS package_path,
       CASE WHEN blds.rule_type like '%_test' THEN 'test'
@@ -21,7 +22,7 @@ WITH dir_parts AS (
            WHEN sources.path LIKE '%.cc' THEN 'c++'
            ELSE 'resources'
       END AS lang_path
-    FROM mool.blds
+    FROM mool_dedup.blds
       INNER JOIN mvn.module_paths
         ON blds.id = module_paths.id
       INNER JOIN mool.bld_to_sources
