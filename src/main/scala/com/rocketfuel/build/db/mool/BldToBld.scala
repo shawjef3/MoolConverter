@@ -33,6 +33,6 @@ object BldToBld extends Deployable with InsertableToValue[BldToBld] with Selecta
     """INSERT INTO mool.bld_to_bld (source_id, target_id, is_compile) VALUES (@sourceId, @targetId, @isCompile) RETURNING id"""
 
   override val selectByIdSql: CompiledStatement =
-    """SELECT * FROM mool.bld_to_bld WHERE id = @id"""
+    """SELECT * FROM mool_dedup.bld_to_bld WHERE id = @id"""
 
 }

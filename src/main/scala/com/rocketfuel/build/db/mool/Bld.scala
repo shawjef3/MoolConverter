@@ -81,7 +81,7 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
   }.mkString(", ")
 
   val all =
-    Select[Bld](s"SELECT $selectList FROM mool.blds")
+    Select[Bld](s"SELECT $selectList FROM mool_dedup.blds")
 
   //Blds which aren't references to maven artifacts.
   val localBlds =

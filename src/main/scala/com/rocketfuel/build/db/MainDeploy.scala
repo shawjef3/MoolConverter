@@ -29,6 +29,8 @@ object MainDeploy extends App {
 
     Hacks.hack()
 
+    mool.dedup.Run.run()
+
     DependencySupplements.supplement()
   }
 
