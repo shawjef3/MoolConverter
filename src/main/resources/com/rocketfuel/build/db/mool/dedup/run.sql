@@ -127,14 +127,14 @@ INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
 INSERT INTO mool_dedup.bld_to_source_additions (bld_id, source_id)
   SELECT
     (SELECT id
-     FROM mool_dedup.bld_to_bld_additions
+     FROM mool_dedup.blds
      WHERE path = ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']),
     (SELECT id
      FROM mool.sources
      WHERE path = 'java/com/rocketfuel/modeling/athena/core/common/JsonConfiguration.scala');
 
 --3b
-SELECT mool_dedup.remove_bld(ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'JsonConfiguration']);
+SELECT mool_dedup.remove_bld(ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'JsonConverter']);
 
 --4a
 SELECT mool_dedup.factor_into(

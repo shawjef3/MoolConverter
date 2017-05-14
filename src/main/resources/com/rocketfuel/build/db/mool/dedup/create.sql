@@ -166,7 +166,7 @@ BEGIN
     WHERE source_id = old_source_id
           AND target_id = move_target_id;
 
-  SELECT mool_dedup.remove_dependency(old_source_id, move_target_id);
+  PERFORM mool_dedup.remove_dependency(old_source_id, move_target_id);
 
   RETURN true;
 END;
@@ -251,7 +251,7 @@ BEGIN
   FROM mool_dedup.blds
   WHERE path = bld_path;
 
-  SELECT id INTO STRICT source_path
+  SELECT id INTO STRICT source_id
   FROM mool.sources
   WHERE path = source_path;
 
@@ -459,6 +459,7 @@ DECLARE
 BEGIN
   SELECT id INTO STRICT parent0_id FROM mool.blds WHERE path = parent0;
   SELECT id INTO STRICT parent1_id FROM mool.blds WHERE path = parent1;
+
   RETURN mool_dedup.factor(parent0_id, parent1_id, new_parent);
 END;
 $$ LANGUAGE plpgsql;
@@ -495,10 +496,10 @@ DECLARE
 BEGIN
 
   SELECT id INTO STRICT parent0_id
-  FROM mool.blds WHERE path = parent0_path;
+  FROM mool_dedup.blds WHERE path = parent0_path;
 
   SELECT id INTO STRICT parent1_id
-  FROM mool.blds WHERE path = parent1_path;
+  FROM mool_dedup.blds WHERE path = parent1_path;
 
   RETURN mool_dedup.factor_into(parent0_id, parent1_id);
 
