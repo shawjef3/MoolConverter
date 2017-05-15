@@ -384,37 +384,27 @@ BEGIN
   new_parent_id = mool_dedup.copy_bld(parent0_id, new_parent);
 
   --add the new bld to source mappings (common sources)
-  INSERT INTO mool_dedup.bld_to_source_additions (
-    bld_id,
+  PERFORM mool_dedup.move_source(
+    parent0_id,
+    new_parent_id,
     source_id
   )
-    SELECT new_parent_id, source_id
-    FROM (
-           SELECT source_id
-           FROM mool.bld_to_sources
-           WHERE bld_id = parent0_id
-           INTERSECT
-           SELECT source_id
-           FROM mool.bld_to_sources
-           WHERE bld_id = parent1_id
-         ) sources;
+  FROM (
+         SELECT source_id
+         FROM mool.bld_to_sources
+         WHERE bld_id = parent0_id
+         INTERSECT
+         SELECT source_id
+         FROM mool.bld_to_sources
+         WHERE bld_id = parent1_id
+       ) sources;
 
-  --remove the old bld to source mappings
-  INSERT INTO mool_dedup.bld_to_source_removals (bld_to_source_id)
-    SELECT bld_to_sources.id
-    FROM mool_dedup.bld_to_source_additions
-      INNER JOIN mool.bld_to_sources
-        ON bld_to_source_additions.source_id = bld_to_sources.source_id
-           AND bld_to_sources.bld_id in (parent1_id, parent1_id)
-    WHERE bld_to_source_additions.bld_id = new_parent_id;
-
-  --add the new bld to bld mappings (common dependencies)
-  INSERT INTO mool_dedup.bld_to_bld_additions (
-    source_id,
-    target_id,
-    is_compile
+--   add the new bld to bld mappings (common dependencies)
+  PERFORM mool_dedup.move_dependency(
+    parent0_id,
+    new_parent_id,
+    target_id
   )
-    SELECT new_parent_id, target_id, false
     FROM (
            SELECT target_id
            FROM mool.bld_to_bld
@@ -423,25 +413,7 @@ BEGIN
            SELECT target_id
            FROM mool.bld_to_bld
            WHERE source_id = parent1_id
-         ) targets
-    UNION
-    VALUES (parent0_id, new_parent_id, false),
-      (parent1_id, new_parent_id, false);
-
-  --remove the old bld to bld mappings
-  INSERT INTO mool_dedup.bld_to_bld_removals (bld_to_bld_id)
-    SELECT bld_to_bld.id
-    FROM mool.bld_to_bld
-    WHERE source_id IN (parent0_id, parent1_id)
-          AND target_id IN (
-      SELECT target_id
-      FROM mool.bld_to_bld
-      WHERE source_id = parent0_id
-      INTERSECT
-      SELECT target_id
-      FROM mool.bld_to_bld
-      WHERE source_id = parent1_id
-    );
+         ) targets;
 
   --The original BLDs depend on the new one.
   INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
