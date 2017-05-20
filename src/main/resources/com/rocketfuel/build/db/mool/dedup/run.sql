@@ -14,11 +14,92 @@ SELECT mool_dedup.factor(
 );
 
 /*
+{java,com,rocketfuel,modeling,athena,core,common,RetargetingCommon}
+{java,com,rocketfuel,modeling,athena,core,common,Common}
+{java,com,rocketfuel,modeling,athena,core,common,RequestDataExtractor}
+{java,com,rocketfuel,modeling,athena,core,common,JsonConverter}
+{java,com,rocketfuel,modeling,athena,core,common,TrainingDataExtractor}
+
+1. Factor Common and RetargetingCommon to CommonCommon.
+
+2. Remove Configuration.scala from CommonCommon.
+
+3a. Remove JsonConfiguration.scala from CommonCommon.
+3b. Add dependency from CommonCommon to JsonConverter.
+--NOTE: 3b adds dependency to Configuration.
+
+Everything that depends on RequestDataExtractor already depends on Common.
+4. Copy sources and dependencies from RequestDataExtractor to Common.
+
+Everything that depends on TrainingDataExtractor already depends on Common.
+5. Copy sources and dependencies from TrainingDataExtractor to Common.
+
+6a. Remove TrainingInstanceDataExtractor.scala from RetargetingCommon, TrainingDataExtractor.
+6b. Add TrainingInstanceDataExtractor.scala to CommonCommon.
+*/
+
+--1
+SELECT mool_dedup.factor(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
+);
+
+--2
+SELECT mool_dedup.remove_source(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  'java/com/rocketfuel/modeling/athena/core/common/Configuration.scala'
+);
+
+--3a
+SELECT mool_dedup.remove_source(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  'java/com/rocketfuel/modeling/athena/core/common/JsonConfiguration.scala'
+);
+
+--3b
+SELECT mool_dedup.add_dependency(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'JsonConverter'],
+  false
+);
+
+--4
+SELECT mool_dedup.move_into(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RequestDataExtractor'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
+);
+
+--5
+SELECT mool_dedup.move_into(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TrainingDataExtractor'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
+);
+
+--6a
+SELECT mool_dedup.remove_source(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon'],
+  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
+);
+
+--6b
+SELECT mool_dedup.add_source(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
+);
+
+--except we don't want CommonCommon to depend on Common, since that's a circular dependency.
+SELECT mool_dedup.remove_dependency(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
+);
+
+/*
 {java,com,rocketfuel,modeling,athena,core,common,RetargetingAdScoringInfo}
 {java,com,rocketfuel,modeling,athena,core,common,AdScoringInfo}
 
-Remove Common as a dependency of AdScoringInfo.
-Add Common as a dependency to things that depend on AdScoringInfo.
+1. Remove Common as a dependency of AdScoringInfo.
+2. Add CommonCommon as a dependency to AdScoringInfo.
 
 Replace dependencies on RetargetingAdScoringInfo with AdScoringInfo and RetargetingCommon.
 Remove source mappings to RetargetingAdScoringInfo.
@@ -30,15 +111,11 @@ SELECT mool_dedup.remove_dependency(
   array['java','com','rocketfuel','modeling','athena','core','common','Common']
 );
 
-SELECT mool_dedup.add_dependency(source_blds.id, common.id, bld_to_bld.is_compile)
-FROM mool.blds source_blds
-  INNER JOIN mool.bld_to_bld
-    ON source_blds.id = bld_to_bld.source_id
-  INNER JOIN mool.blds target_blds
-    ON target_blds.id = bld_to_bld.target_id
-       AND target_blds.path = array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'AdScoringInfo']
-  CROSS JOIN mool.blds common
-WHERE common.path = array['java','com','rocketfuel','modeling','athena','core','common','Common'];
+SELECT mool_dedup.add_dependency(
+  array['java','com','rocketfuel','modeling','athena','core','common','AdScoringInfo'],
+  array['java','com','rocketfuel','modeling','athena','core','common','CommonCommon'],
+  false
+);
 
 SELECT mool_dedup.remove_source(blds.id, source_id)
 FROM mool.blds
@@ -75,101 +152,6 @@ INSERT INTO mool_dedup.bld_removals (bld_id)
   SELECT id
   FROM mool.blds
   WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingAdScoringInfo'];
-
-/*
-{java,com,rocketfuel,modeling,athena,core,common,RetargetingCommon}
-{java,com,rocketfuel,modeling,athena,core,common,Common}
-{java,com,rocketfuel,modeling,athena,core,common,RequestDataExtractor}
-{java,com,rocketfuel,modeling,athena,core,common,JsonConverter}
-{java,com,rocketfuel,modeling,athena,core,common,TrainingDataExtractor}
-
-1. Factor Common and RetargetingCommon to CommonCommon.
-
-2a. Remove Configuration.scala from CommonCommon.
-2b. Add dependency from CommonCommon to Configuration.
-
-3a. Add JsonConfConverter.scala to CommonCommon.
-3b. Remove JsonConverter.
-
-Everything that depends on RequestDataExtractor already depends on Common.
-4a. Copy sources and dependencies from RequestDataExtractor to Common.
-4b. Delete RequestDataExtractor.
-
-Everything that depends on TrainingDataExtractor already depends on Common.
-5a. Copy sources and dependencies from TrainingDataExtractor to Common.
-5b. Delete TrainingDataExtractor.
-
-6a. Remove TrainingInstanceDataExtractor.scala from RetargetingCommon, TrainingDataExtractor.
-6b. Add TrainingInstanceDataExtractor.scala to CommonCommon.
-*/
-
---1
-SELECT mool_dedup.factor(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
-);
-
---2a
-DELETE FROM mool_dedup.bld_to_source_additions
-USING mool.sources
-WHERE source_id = mool.sources.id
-      AND sources.path = 'java/com/rocketfuel/modeling/athena/core/common/Configuration.scala';
-
---2b
-INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-  SELECT
-    (SELECT id FROM mool_dedup.bld_additions WHERE path = array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']),
-    (SELECT id FROM mool.blds WHERE path = ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Configuration']),
-    false;
-
---3a
-INSERT INTO mool_dedup.bld_to_source_additions (bld_id, source_id)
-  SELECT
-    (SELECT id
-     FROM mool_dedup.blds
-     WHERE path = ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']),
-    (SELECT id
-     FROM mool.sources
-     WHERE path = 'java/com/rocketfuel/modeling/athena/core/common/JsonConfiguration.scala');
-
---3b
-SELECT mool_dedup.remove_bld(ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'JsonConverter']);
-
---4a
-SELECT mool_dedup.factor_into(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RequestDataExtractor'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
-);
-
---4b
-SELECT mool_dedup.remove_bld(ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RequestDataExtractor']);
-
---5a
-SELECT mool_dedup.factor_into(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TrainingDataExtractor'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
-);
-
---5b
-SELECT mool_dedup.remove_bld(ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TrainingDataExtractor']);
-
---6a
-SELECT mool_dedup.remove_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon'],
-  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
-);
-
-SELECT mool_dedup.remove_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TrainingDataExtractor'],
-  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
-);
-
---6b
-SELECT mool_dedup.add_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
-  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
-);
 
 /*
 {java,com,rocketfuel,modeling,athena,core,utils,RetargetingUtils}
@@ -619,3 +601,9 @@ Delete TtlLookupCacheHeavyTest.
 */
 
 SELECT mool_dedup.remove_bld(array['java','com','rocketfuel','grid','luke','service','client','TtlLookupCacheHeavyTest']);
+
+/*
+The server.util copy of UserProfileMode isn't used. It was used by grid.modeling.
+ */
+
+SELECT mool_dedup.remove_bld(array['java', 'com', 'rocketfuel', 'server', 'util', 'audience', 'UserProfileMode']);

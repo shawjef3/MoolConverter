@@ -57,9 +57,13 @@ object Convert {
     parentPoms.write(destinationRoot)
   }
 
+  val gridModelingPatch = getClass.getResource("mvn/grid.modeling/0001-use-original-UserProfileMode.patch")
+
   def gridModeling(destinationRoot: Path): Unit = {
     val modelingRoot = destinationRoot.resolve("grid/modeling")
-    sys.process.Process("git", Seq("clone", "ssh://git.rfiserve.net:29418/grid/modeling", modelingRoot.toAbsolutePath.toString)).!
+    sys.process.Process("git", Seq("clone", "--depth", "1", "ssh://git.rfiserve.net:29418/grid/modeling", modelingRoot.toAbsolutePath.toString)).!
+
+    sys.process.Process(Seq("git", "apply", "-"), modelingRoot.toFile) #< gridModelingPatch !
 
     val checkstyle = modelingRoot.resolve("checkstyle.xml")
 

@@ -25,10 +25,10 @@ WITH dir_parts AS (
     FROM mool_dedup.blds
       INNER JOIN mvn.module_paths
         ON blds.id = module_paths.id
-      INNER JOIN mool.bld_to_sources
-        ON blds.id = bld_to_sources.bld_id
+      INNER JOIN mool_dedup.bld_to_source
+        ON blds.id = bld_to_source.bld_id
       INNER JOIN mool.sources
-        ON bld_to_sources.source_id = sources.id
+        ON bld_to_source.source_id = sources.id
 )
 SELECT
   source,

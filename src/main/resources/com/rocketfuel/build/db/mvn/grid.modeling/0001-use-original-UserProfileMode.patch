@@ -1,0 +1,57 @@
+From 02cbf44ee9f522f40d9f0ffaf0a488df3a63747a Mon Sep 17 00:00:00 2001
+From: Jeff Shaw <jshaw@rocketfuel.com>
+Date: Mon, 15 May 2017 15:53:31 -0400
+Subject: [PATCH] use original UserProfileMode
+
+---
+ .../grid/modeling/backtest/BidRequestScoringContextBacktest.java        | 2 +-
+ .../grid/modeling/backtest/BidRequestScoringContextTestImpl.java        | 2 +-
+ .../com/rocketfuel/grid/modeling/backtest/FeatureCalculatorTest.java    | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/main/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextBacktest.java b/src/main/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextBacktest.java
+index 4090f95..81fcea9 100644
+--- a/src/main/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextBacktest.java
++++ b/src/main/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextBacktest.java
+@@ -30,10 +30,10 @@ import com.rocketfuel.modeling.common.FeatureUtils;
+ import com.rocketfuel.modeling.common.IqModelMedians;
+ import com.rocketfuel.modeling.common.ModelChannel;
+ import com.rocketfuel.modeling.common.ModelScore;
++import com.rocketfuel.modeling.common.UserProfileMode;
+ import com.rocketfuel.modeling.common.data.MobilePixelMap;
+ import com.rocketfuel.server.util.Base64;
+ import com.rocketfuel.server.util.TCollectionUtils;
+-import com.rocketfuel.server.util.UserProfileMode;
+ import com.rocketfuel.server.util.actions.ActionType;
+ import com.rocketfuel.server.util.track.CookieUtils;
+ import com.rocketfuel.server.util.track.ExchangeLabel;
+diff --git a/src/test/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextTestImpl.java b/src/test/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextTestImpl.java
+index 23821c4..442b58e 100644
+--- a/src/test/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextTestImpl.java
++++ b/src/test/java/com/rocketfuel/grid/modeling/backtest/BidRequestScoringContextTestImpl.java
+@@ -12,8 +12,8 @@ import com.rocketfuel.modeling.common.FeatureTierType;
+ import com.rocketfuel.modeling.common.IqModelMedians;
+ import com.rocketfuel.modeling.common.ModelChannel;
+ import com.rocketfuel.modeling.common.ModelScore;
++import com.rocketfuel.modeling.common.UserProfileMode;
+ import com.rocketfuel.modeling.common.data.FeatureTierMap;
+-import com.rocketfuel.server.util.UserProfileMode;
+ import com.rocketfuel.server.util.actions.ActionType;
+ import gnu.trove.list.TLongList;
+ import gnu.trove.map.TIntDoubleMap;
+diff --git a/src/test/java/com/rocketfuel/grid/modeling/backtest/FeatureCalculatorTest.java b/src/test/java/com/rocketfuel/grid/modeling/backtest/FeatureCalculatorTest.java
+index 9e7bbbf..27f5590 100644
+--- a/src/test/java/com/rocketfuel/grid/modeling/backtest/FeatureCalculatorTest.java
++++ b/src/test/java/com/rocketfuel/grid/modeling/backtest/FeatureCalculatorTest.java
+@@ -3,8 +3,8 @@ package com.rocketfuel.grid.modeling.backtest;
+ import com.rocketfuel.grid.modeling.backtest.BackTestConstants.ClickerStatus;
+ import com.rocketfuel.grid.modeling.backtest.BackTestConstants.UserStatus;
+ import com.rocketfuel.modeling.common.BidRequestScoringContext;
++import com.rocketfuel.modeling.common.UserProfileMode;
+ import com.rocketfuel.server.util.CollectionUtils;
+-import com.rocketfuel.server.util.UserProfileMode;
+ import com.rocketfuel.server.util.tuples.Tuple;
+ import com.rocketfuel.server.util.tuples.Tuple2;
+ import gnu.trove.map.TLongLongMap;
+--
+2.10.1

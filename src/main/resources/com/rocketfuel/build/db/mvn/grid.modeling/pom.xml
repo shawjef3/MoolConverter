@@ -34,6 +34,11 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>com.rocketfuel.modeling</groupId>
+      <artifactId>modeling.common.UserProfileMode</artifactId>
+      <version>M1</version>
+    </dependency>
+    <dependency>
       <groupId>com.rocketfuel.server</groupId>
       <artifactId>server.util.IOUtils</artifactId>
       <version>M1</version>
