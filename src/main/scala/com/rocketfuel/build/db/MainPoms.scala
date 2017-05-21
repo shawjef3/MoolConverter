@@ -22,8 +22,6 @@ object MainPoms extends App {
     Convert.poms(destinationRoot)
   }
 
-  Parents.writeModelingCommon(destinationRoot)
-
   Parents.writeRoot(destinationRoot)
 
 }

@@ -20,12 +20,12 @@ SELECT mool_dedup.factor(
 {java,com,rocketfuel,modeling,athena,core,common,JsonConverter}
 {java,com,rocketfuel,modeling,athena,core,common,TrainingDataExtractor}
 
-1. Factor Common and RetargetingCommon to CommonCommon.
+1. Factor RetargetingCommon into Common.
 
-2. Remove Configuration.scala from CommonCommon.
+2. Remove Configuration.scala from Common.
 
-3a. Remove JsonConfiguration.scala from CommonCommon.
-3b. Add dependency from CommonCommon to JsonConverter.
+3a. Remove JsonConfiguration.scala from Common.
+3b. Add dependency from Common to JsonConverter.
 --NOTE: 3b adds dependency to Configuration.
 
 Everything that depends on RequestDataExtractor already depends on Common.
@@ -35,31 +35,30 @@ Everything that depends on TrainingDataExtractor already depends on Common.
 5. Copy sources and dependencies from TrainingDataExtractor to Common.
 
 6a. Remove TrainingInstanceDataExtractor.scala from RetargetingCommon, TrainingDataExtractor.
-6b. Add TrainingInstanceDataExtractor.scala to CommonCommon.
+6b. Add TrainingInstanceDataExtractor.scala to Common.
 */
 
 --1
-SELECT mool_dedup.factor(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
+SELECT mool_dedup.move_into(
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
 );
 
 --2
 SELECT mool_dedup.remove_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
   'java/com/rocketfuel/modeling/athena/core/common/Configuration.scala'
 );
 
 --3a
 SELECT mool_dedup.remove_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
   'java/com/rocketfuel/modeling/athena/core/common/JsonConfiguration.scala'
 );
 
 --3b
 SELECT mool_dedup.add_dependency(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'JsonConverter'],
   false
 );
@@ -67,55 +66,29 @@ SELECT mool_dedup.add_dependency(
 --4
 SELECT mool_dedup.move_into(
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RequestDataExtractor'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
 );
 
 --5
 SELECT mool_dedup.move_into(
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'TrainingDataExtractor'],
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon']
-);
-
---6a
-SELECT mool_dedup.remove_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon'],
-  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
-);
-
---6b
-SELECT mool_dedup.add_source(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
-  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
-);
-
---except we don't want CommonCommon to depend on Common, since that's a circular dependency.
-SELECT mool_dedup.remove_dependency(
-  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'CommonCommon'],
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
+);
+
+--6
+SELECT mool_dedup.add_source(
+  ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
+  'java/com/rocketfuel/modeling/athena/core/common/TrainingInstanceDataExtractor.scala'
 );
 
 /*
 {java,com,rocketfuel,modeling,athena,core,common,RetargetingAdScoringInfo}
 {java,com,rocketfuel,modeling,athena,core,common,AdScoringInfo}
 
-1. Remove Common as a dependency of AdScoringInfo.
-2. Add CommonCommon as a dependency to AdScoringInfo.
-
-Replace dependencies on RetargetingAdScoringInfo with AdScoringInfo and RetargetingCommon.
+Replace dependencies on RetargetingAdScoringInfo with AdScoringInfo and Common.
 Remove source mappings to RetargetingAdScoringInfo.
 Remove BLD RetargetingAdScoringInfo.
 */
-
-SELECT mool_dedup.remove_dependency(
-  array['java','com','rocketfuel','modeling','athena','core','common','AdScoringInfo'],
-  array['java','com','rocketfuel','modeling','athena','core','common','Common']
-);
-
-SELECT mool_dedup.add_dependency(
-  array['java','com','rocketfuel','modeling','athena','core','common','AdScoringInfo'],
-  array['java','com','rocketfuel','modeling','athena','core','common','CommonCommon'],
-  false
-);
 
 SELECT mool_dedup.remove_source(blds.id, source_id)
 FROM mool.blds
@@ -136,7 +109,7 @@ INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
     FROM mool.blds
     WHERE path IN (
       array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'AdScoringInfo'],
-      array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingCommon']
+      array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
     )
   )
   SELECT sources.id, new_targets.id, bld_to_bld.is_compile
@@ -157,7 +130,7 @@ INSERT INTO mool_dedup.bld_removals (bld_id)
 {java,com,rocketfuel,modeling,athena,core,utils,RetargetingUtils}
 {java,com,rocketfuel,modeling,athena,core,utils,Utils}
 
-Remove sources and dependencies in Utils that are in RetargetingUtils.
+Remove sources and dependencies in Utils that are in RetargetingUtils, unless they are compile.
 
 Make Utils depend on RetargetingUtils
 */
@@ -189,12 +162,14 @@ wITH utils_id AS (
   SELECT bld_to_bld.target_id
   FROM mool.bld_to_bld
   WHERE source_id IN (SELECT id FROM utils_id)
+    AND NOT is_compile
   INTERSECT
   SELECT bld_to_bld.target_id
   FROM mool.blds
     INNER JOIN mool.bld_to_bld
       ON blds.id = bld_to_bld.source_id
   WHERE blds.path = ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'utils', 'RetargetingUtils']
+    AND NOT is_compile
 )
 SELECT mool_dedup.remove_dependency(id, dependencies.target_id)
 FROM utils_id
@@ -230,24 +205,19 @@ SELECT mool_dedup.add_dependency(
 {java,com,rocketfuel,grid,common,db,Databases210}
 
 This should be cross compiled, which I'm not sure is possible with Maven.
-Idea: create two projects - one has Databases.scala, the other links to it. Two poms - one for 2.10, one for 2.11.
+Idea: create a project with two profiles. One profile has name suffix, _2.10, other has _2.11.
 */
 
 /*
 {java,com,rocketfuel,modeling,athena,core,modules,RetargetingModules}
 {java,com,rocketfuel,modeling,athena,core,modules,Modules}
 
-Create ModulesCommon with the sources and dependencies in common between RetargetingModules and Modules.
-
-Modules and RetargetingModules depend on ModulesCommon.
-
-Modules and RetargetingModules have only unique sources and dependencies.
+Move RetargetingModules into ModulesCommon.
 */
 
-SELECT mool_dedup.factor(
+SELECT mool_dedup.move_into(
   array['java','com','rocketfuel','modeling','athena','core','modules','RetargetingModules'],
-  array['java','com','rocketfuel','modeling','athena','core','modules','Modules'],
-  array['java','com','rocketfuel','modeling','athena','core','modules','ModulesCommon']
+  array['java','com','rocketfuel','modeling','athena','core','modules','Modules']
 );
 
 /*
@@ -319,7 +289,6 @@ FROM (
 SELECT mool_dedup.add_dependency(array['java','com','rocketfuel','modeling','common','JavaSource'], path, false)
 FROM (
        VALUES
-         (array['java','com','rocketfuel','modeling','common','JavaSource']),
          (array['java','com','rocketfuel','modeling','common','BidRequestScoringContext']),
          (array['java','com','rocketfuel','modeling','common','FeatureScore']),
          (array['java','com','rocketfuel','modeling','common','BtFeatureType']),
@@ -603,7 +572,11 @@ Delete TtlLookupCacheHeavyTest.
 SELECT mool_dedup.remove_bld(array['java','com','rocketfuel','grid','luke','service','client','TtlLookupCacheHeavyTest']);
 
 /*
-The server.util copy of UserProfileMode isn't used. It was used by grid.modeling.
+Add dependency from ['java', 'com', 'rocketfuel', 'grid', 'onlinestore', 'offlineupload', 'Base'] to commons-cli.
  */
 
-SELECT mool_dedup.remove_bld(array['java', 'com', 'rocketfuel', 'server', 'util', 'audience', 'UserProfileMode']);
+SELECT mool_dedup.add_dependency(
+  array['java', 'com', 'rocketfuel', 'grid', 'onlinestore', 'offlineupload', 'Base'],
+  array['java', 'mvn', 'commons-cli', 'CommandLineInterface'],
+  false
+);

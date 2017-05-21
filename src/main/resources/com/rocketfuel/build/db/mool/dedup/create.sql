@@ -406,24 +406,38 @@ BEGIN
        ) sources;
 
   --add the new bld to bld mappings (common dependencies)
-  PERFORM mool_dedup.move_dependency_source(
-    parent0_id,
+  PERFORM mool_dedup.add_dependency(
     new_parent_id,
-    target_id
+    target_id,
+    is_compile
   )
-    FROM (
-           SELECT target_id
-           FROM mool.bld_to_bld
-           WHERE source_id = parent0_id
-           INTERSECT
-           SELECT target_id
-           FROM mool.bld_to_bld
-           WHERE source_id = parent1_id
-         ) targets;
+  FROM mool_dedup.bld_to_bld
+  WHERE
+    source_id IN (parent0_id, parent1_id)
+    AND target_id IN (
+      SELECT target_id
+      FROM mool.bld_to_bld
+      WHERE source_id = parent0_id
+      INTERSECT
+      SELECT target_id
+      FROM mool.bld_to_bld
+      WHERE source_id = parent1_id
+    );
+
+  --copy compile BLDs
+  PERFORM mool_dedup.add_dependency(
+    new_parent_id,
+    target_id,
+    true
+  )
+  FROM mool_dedup.bld_to_bld
+  WHERE
+    source_id IN (parent0_id, parent1_id)
+    AND is_compile;
 
   --The original BLDs depend on the new one.
-  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-    VALUES (parent0_id, new_parent_id, false), (parent1_id, new_parent_id, false);
+  PERFORM mool_dedup.add_dependency(parent0_id, new_parent_id, false);
+  PERFORM mool_dedup.add_dependency(parent1_id, new_parent_id, false);
 
   RETURN true;
 
@@ -493,9 +507,9 @@ BEGIN
   PERFORM mool_dedup.move_source(
     parent0_id,
     parent1_id,
-    bld_to_sources.source_id
+    bld_to_source.source_id
   )
-  FROM mool_dedup.bld_to_sources
+  FROM mool_dedup.bld_to_source
   WHERE bld_id = parent0_id;
 
   PERFORM mool_dedup.move_dependency_source(
@@ -504,7 +518,8 @@ BEGIN
     bld_to_bld.target_id
   )
   FROM mool_dedup.bld_to_bld
-  WHERE source_id = parent0_id;
+  WHERE source_id = parent0_id
+    AND target_id <> parent1_id; --prevent self dependency;
 
   PERFORM mool_dedup.move_dependency_target(
     source_id,
@@ -525,6 +540,6 @@ DECLARE
   parent0_id int = mool_dedup.bld_id(parent0_path);
   parent1_id int = mool_dedup.bld_id(parent1_path);
 BEGIN
-  RETURN mool_dedup.factor_into(parent0_id, parent1_id);
+  RETURN mool_dedup.move_into(parent0_id, parent1_id);
 END;
 $$ LANGUAGE plpgsql;
