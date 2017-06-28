@@ -61,7 +61,7 @@ object Convert {
     val modelingRoot = destinationRoot.resolve("grid/modeling")
     sys.process.Process("git", Seq("clone", "--depth", "1", "ssh://git.rfiserve.net:29418/grid/modeling", modelingRoot.toAbsolutePath.toString)).!
 
-    sys.process.Process(Seq("git", "fetch", "ssh://jshaw@gerrit.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/3"), modelingRoot.toFile) !
+    sys.process.Process(Seq("git", "fetch", "ssh://jshaw@gerrit.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/4"), modelingRoot.toFile) !
 
     sys.process.Process(Seq("git", "cherry-pick", "FETCH_HEAD"), modelingRoot.toFile) !
   }
