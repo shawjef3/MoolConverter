@@ -1,7 +1,7 @@
 Run
 ===
 
-Set up a local PostgreSQL instance. For MacOS, an easy way is to use [http://postgresapp.com/]. Connect to it and run,
+Set up a local PostgreSQL instance. For MacOS, an easy way is to use <http://postgresapp.com/>. Connect to it and run,
 
 ```postgresql
 CREATE DATABASE mool_conversion;
@@ -21,4 +21,4 @@ There are three main classes.
 Development
 ===========
 
-Run `MainDeploy`. Using a database client of your choice, connect to the `mool_conversion` database. Create functions and views to your heart's content. When you are happy, you can add them to part of the deployment process. You can see the existing ones in [src/main/resources/com/rocketfuel/build/db/mvn] and [src/main/scala/com/rocketfuel/build/db/Deploy.scala]. If you are adding a new target project type, you should create a new schema in the database, along with a sibling package to the `mvn` package, e.g. `com.rocketfuel.build.db.gradle`.
+Run `MainDeploy`. Using a database client of your choice, connect to the `mool_conversion` database. Create functions and views to your heart's content. When you are happy, you can add them to part of the deployment process. You can see the existing ones in [mvn](src/main/resources/com/rocketfuel/build/db/mvn) and [Deploy.scala](src/main/scala/com/rocketfuel/build/db/Deploy.scala). If you are adding a new target project type, you should create a new schema in the database, along with a sibling package to the `mvn` package, e.g. `com.rocketfuel.build.db.gradle`.
