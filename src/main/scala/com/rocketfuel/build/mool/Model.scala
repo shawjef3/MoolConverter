@@ -320,16 +320,15 @@ object Model {
     val versionFiles = findFiles(repo, "RELCFG.versions")
 
     val blds =
-      for {
-        bldFile <- bldFiles
-      } yield {
+      bldFiles.flatMap { bldFile =>
         val blds = Bld.of(repo.resolve(bldFile))
         val bldPathParts = bldFile.split("/").dropRight(1).toVector
-        for {
-          (bldName, bld) <- blds
-          if javaRuleTypes.contains(bld.rule_type)
-        } yield (bldPathParts :+ bldName) -> bld
-      }
+        blds.filter {
+          case (_, bld) => javaRuleTypes.contains(bld.rule_type)
+        }.map {
+          case (bldName, bld) => (bldPathParts :+ bldName) -> bld
+        }
+      }.toMap
 
     val relCfgs =
       for (relCfgFile <- relCfgFiles) yield {
@@ -353,7 +352,7 @@ object Model {
 
     Model(
       root = repo,
-      blds = blds.foldLeft(Map.empty[MoolPath, Bld])(_ ++ _),
+      blds = blds,
       relCfgs = relCfgs.foldLeft(Map.empty[MoolPath, RelCfg])(_ ++ _),
       versions = versions,
       bldToTestBldSupplement
