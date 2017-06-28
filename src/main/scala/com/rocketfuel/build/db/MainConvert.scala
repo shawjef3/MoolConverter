@@ -15,7 +15,7 @@ object MainConvert extends App {
   //TODO: delete destinationRoot
   val dbConfig = new HikariConfig()
 
-  dbConfig.setJdbcUrl("jdbc:postgresql://localhost/jshaw")
+  dbConfig.setJdbcUrl("jdbc:postgresql://localhost/mool_conversion")
 
   val pool = Pool(dbConfig)
 
