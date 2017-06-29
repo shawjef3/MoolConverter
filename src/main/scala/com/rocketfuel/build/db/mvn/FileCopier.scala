@@ -1,6 +1,5 @@
 package com.rocketfuel.build.db.mvn
 
-import java.nio.charset.MalformedInputException
 import java.nio.file.{Files, Path, StandardCopyOption, StandardOpenOption}
 
 /**
@@ -29,7 +28,7 @@ case class FileCopier(
     if (source.endsWith(".proto")) {
       copyProto(sourcePath, destinationPath)
     } else {
-      FileCopier.copyFixed(sourcePath, destinationPath)
+      Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING)
     }
   }
 
@@ -53,58 +52,16 @@ case class FileCopier(
 
 object FileCopier {
 
-  val replacements = Map(
-    "\"/java/com/rocketfuel/modeling/athena/testdata/".r -> "\"/testdata/",
-    "\"\\./java/com/rocketfuel/modeling/athena/testdata".r -> "./testdata",
-    "System\\.getenv\\(\"BUILD_ROOT\"\\)".r -> "System.getProperty(\"user.dir\")"
-  )
-
-  def fixAthenaTestData(s: String): String = {
-    replacements.foldRight(s) {
-      case ((matcher, replacement), accum) =>
-        matcher.replaceAllIn(accum, replacement)
-    }
-  }
-
-  def copyAthenaTestFile(source: Path, destination: Path): Unit = {
-    Files.createDirectories(destination.getParent)
-    try {
-      val sourceContents = io.Source.fromFile(source.toFile).mkString
-      val destinationContents = FileCopier.fixAthenaTestData(sourceContents)
-      Files.write(destination,
-        destinationContents.getBytes("UTF-8"),
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING
-      )
-    } catch {
-      case _: MalformedInputException =>
-        //it's not a text file
-        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
-    }
-  }
-
-  def copyAthenaTestFiles(source: Path, destination: Path): Unit = {
+  def copyFiles(source: Path, destination: Path): Unit = {
     Files.createDirectories(destination)
     Files.walk(source).filter(Files.isRegularFile(_)).forEach(
       path => {
         val relativePath = source.relativize(path)
         val pathDestination = destination.resolve(relativePath)
-        copyAthenaTestFile(path, pathDestination)
+        Files.createDirectories(pathDestination.getParent)
+        Files.copy(path, pathDestination, StandardCopyOption.REPLACE_EXISTING)
       }
     )
-  }
-
-  def copyFixed(source: Path, destination: Path): Unit = {
-    try {
-      val sourceContents = io.Source.fromFile(source.toFile).mkString
-      val destinationContents = fixAthenaTestData(sourceContents)
-      Files.createDirectories(destination.getParent)
-      Files.write(destination, destinationContents.getBytes("UTF-8"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-    } catch {
-      case _: MalformedInputException =>
-        //it's not a text file
-        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
-    }
   }
 
 }

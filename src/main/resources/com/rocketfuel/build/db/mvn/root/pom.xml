@@ -31,7 +31,7 @@
         <version>2.20</version>
         <configuration>
           <environmentVariables>
-            <BUILD_ROOT>/Users/jshaw/git/data/vostok</BUILD_ROOT>
+            <BUILD_ROOT>${project.basedir}</BUILD_ROOT>
           </environmentVariables>
         </configuration>
       </plugin>

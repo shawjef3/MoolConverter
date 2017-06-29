@@ -13,8 +13,8 @@ object Convert {
 
     //copy testdata
     val testData = moolRoot.resolve("java/com/rocketfuel/modeling/athena/testdata")
-    val testDataDestination = destinationRoot.resolve("testdata")
-    FileCopier.copyAthenaTestFiles(testData, testDataDestination)
+    val testDataDestination = destinationRoot.resolve("java/com/rocketfuel/modeling/athena/testdata")
+    FileCopier.copyFiles(testData, testDataDestination)
   }
 
   def poms(destinationRoot: Path)(implicit connection: Connection): Unit = {
