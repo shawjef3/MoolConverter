@@ -28,11 +28,11 @@ object Clone {
     /*
     If this fails, go to https://gerrit.rfiserve.net/#/c/115415/, rebase, and update the refs below.
      */
-    clone("ssh://git.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/5", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/6", destinationRoot)
   }
 
   def vostok(destinationRoot: Path): Unit = {
-    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/2", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/4", destinationRoot)
   }
 
 }

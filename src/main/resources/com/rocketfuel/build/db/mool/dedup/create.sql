@@ -29,7 +29,8 @@ CREATE TABLE mool_dedup.bld_additions (
   artifact_id text,
   version text,
   repo_url text,
-  classifier text
+  classifier text,
+  file_package text
 );
 
 CREATE TABLE mool_dedup.bld_removals (

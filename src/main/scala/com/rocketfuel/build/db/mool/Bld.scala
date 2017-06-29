@@ -17,7 +17,8 @@ case class Bld(
   artifactId: Option[String] = None,
   version: Option[String] = None,
   repoUrl: Option[String] = None,
-  classifier: Option[String] = None
+  classifier: Option[String] = None,
+  filePackage: Option[String] = None
 ) {
 
   def pom(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path): Elem = {
@@ -72,7 +73,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       "artifact_id" -> "artifactId",
       "version" -> "version",
       "repo_url" -> "repoUr",
-      "classifier" -> "classifier"
+      "classifier" -> "classifier",
+      "file_package" -> "filePackage"
     )
 
   private val selectList = {
@@ -102,7 +104,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         |  artifact_id text,
         |  version text,
         |  repo_url text,
-        |  classifier text
+        |  classifier text,
+        |  file_package text
         |)
         |""".stripMargin
     )
@@ -120,7 +123,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  artifact_id,
       |  version,
       |  repo_url,
-      |  classifier
+      |  classifier,
+      |  file_package
       |) VALUES (
       |  @path,
       |  @ruleType,
@@ -130,7 +134,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  @artifactId,
       |  @version,
       |  @repoUrl,
-      |  @classifier
+      |  @classifier,
+      |  @filePackage
       |) RETURNING id
       |""".stripMargin
 
@@ -146,7 +151,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         groupId = bld.maven_specs.map(_.group_id),
         version = bld.maven_specs.map(_.version),
         repoUrl = bld.maven_specs.map(_.repo_url),
-        classifier = bld.maven_specs.flatMap(_.classifier)
+        classifier = bld.maven_specs.flatMap(_.classifier),
+        filePackage = bld.file_package
       )
     )
   }

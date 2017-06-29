@@ -6,6 +6,47 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 object Convert {
 
+  //This is a hack for athena testdata
+  val usesTestData = Set(
+    "java/com/rocketfuel/modeling/athena/pipelines/featureDist/FeatureDistTest",
+    "java/com/rocketfuel/modeling/athena/core/utils/UtilsTest",
+    "java/com/rocketfuel/modeling/athena/core/utils/UtilsSparkTest",
+    "java/com/rocketfuel/modeling/athena/core/utils/Utils",
+    "java/com/rocketfuel/modeling/athena/core/modules/ml/MLModulesTest",
+    "java/com/rocketfuel/modeling/athena/core/modules/LogisticRegressionOWLQNModuleTest",
+    "java/com/rocketfuel/modeling/athena/core/modules/EncodingModulesTest",
+    "java/com/rocketfuel/modeling/athena/core/modules/EncodingModulesTest",
+    "java/com/rocketfuel/modeling/athena/core/modules/BacktestAUCCalculationModuleTest",
+    "java/com/rocketfuel/modeling/athena/core/ml/models/ParamTest",
+    "java/com/rocketfuel/modeling/athena/core/common/TestSetup",
+    "java/com/rocketfuel/modeling/athena/core/common/JsonConverterTest",
+    "java/com/rocketfuel/modeling/athena/core/common/FeatureGroupingFunctionsTest",
+    "java/com/rocketfuel/modeling/athena/core/common/ConfLiftTest",
+    "java/com/rocketfuel/modeling/athena/core/common/CommonTest",
+    "java/com/rocketfuel/modeling/athena/core/common/BacktestUtilsTest"
+  ).map(_.split("/").toSeq)
+
+  def addBuildRoot(pom: String): String = {
+    pom.replace(
+      "</properties>",
+      """</properties>
+        |  <build>
+        |    <plugins>
+        |      <plugin>
+        |        <groupId>me.jeffshaw.scalatest</groupId>
+        |        <artifactId>scalatest-maven-plugin</artifactId>
+        |        <configuration>
+        |          <environmentVariables>
+        |            <BUILD_ROOT>${project.parent.parent.parent.parent.basedir}</BUILD_ROOT>
+        |          </environmentVariables>
+        |        </configuration>
+        |      </plugin>
+        |    </plugins>
+        |  </build>
+        |""".stripMargin
+    )
+  }
+
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val copies = Copy.all.vector().toSet
     val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
@@ -44,8 +85,13 @@ object Convert {
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath)
       val pomPath = modulePath.resolve("pom.xml")
 
+      val fixedPom =
+        if (usesTestData.contains(bld.path)) {
+          addBuildRoot(pom.toString)
+        } else pom.toString
+
       Files.createDirectories(modulePath)
-      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+      Files.write(pomPath, fixedPom.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 
     Parents.writeRoot(destinationRoot)

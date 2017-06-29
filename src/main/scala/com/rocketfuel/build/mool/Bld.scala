@@ -13,7 +13,8 @@ case class Bld(
   java_version: Option[String] = None,
   maven_specs: Option[Bld.MavenSpecs] = None,
   package_modules: Option[Vector[String]] = None,
-  package_tests: Option[Vector[String]] = None
+  package_tests: Option[Vector[String]] = None,
+  file_package: Option[String] = None
 ) {
 
   def language: String =

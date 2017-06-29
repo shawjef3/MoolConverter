@@ -3,7 +3,8 @@ WITH dir_parts AS (
     SELECT
       module_paths.path AS module_path,
       sources.path AS source,
-      CASE WHEN sources.path LIKE 'java/%' THEN substring(sources.path from 6 for (char_length(sources.path) - 5))
+      CASE WHEN blds.file_package IS NOT NULL THEN blds.file_package || '/' || (regexp_split_to_array(sources.path, '/'))[array_length(regexp_split_to_array(sources.path, '/'), 1)]
+           WHEN sources.path LIKE 'java/%' THEN substring(sources.path from 6 for (char_length(sources.path) - 5))
            WHEN sources.path LIKE 'clojure/%' then substring(sources.path from 8 for (char_length(sources.path) - 7))
            WHEN sources.path LIKE 'grid/%' THEN 'grid2' || substring(sources.path from 5 for (char_length(sources.path)) - 4)
            ELSE sources.path
