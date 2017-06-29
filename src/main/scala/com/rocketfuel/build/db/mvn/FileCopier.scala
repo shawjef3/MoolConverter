@@ -1,6 +1,7 @@
 package com.rocketfuel.build.db.mvn
 
-import java.nio.file.{Files, Path, StandardCopyOption}
+import java.nio.charset.MalformedInputException
+import java.nio.file.{Files, Path, StandardCopyOption, StandardOpenOption}
 
 /**
   * Most files can be copied verbatim. However, protoc files have imports that use the literal path
@@ -25,9 +26,11 @@ case class FileCopier(
     val destinationPath = destinationRoot.resolve(destination)
 
     Files.createDirectories(destinationPath.getParent)
-    if (source.endsWith(".proto"))
+    if (source.endsWith(".proto")) {
       copyProto(sourcePath, destinationPath)
-    else Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING)
+    } else {
+      FileCopier.copyFixed(sourcePath, destinationPath)
+    }
   }
 
   protected def copyProto(source: Path, destination: Path): Unit = {
@@ -44,6 +47,84 @@ case class FileCopier(
       }
 
     Files.write(destination, destinationContents.getBytes)
+  }
+
+}
+
+object FileCopier {
+
+  val replacements = Map(
+    "\"/java/com/rocketfuel/modeling/athena/testdata/".r -> "\"/testdata/",
+    "\"\\./java/com/rocketfuel/modeling/athena/testdata".r -> "./testdata",
+    "System\\.getenv\\(\"BUILD_ROOT\"\\)".r -> "System.getenv(\"user.dir\")"
+  )
+
+  val fileReplacements = Map(
+    "DeviceAtlasDataLoader.java" ->
+      Map(
+        "libStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(LIB_UNIT_TEST_FILE);" ->
+          "libStream = DeviceAtlasDataLoader.class.getResourceAsStream(LIB_UNIT_TEST_FILE);"
+      )
+  )
+
+  def doReplacements(file: Path, source: String): String = {
+    val result =
+      for (replacements <- fileReplacements.get(file.getFileName.toString)) yield {
+        replacements.foldLeft(source) {
+          case (accum, (original, replacement)) =>
+            accum.replace(original, replacement)
+        }
+      }
+
+    result.getOrElse(source)
+  }
+
+  def fixAthenaTestData(s: String): String = {
+    replacements.foldRight(s) {
+      case ((matcher, replacement), accum) =>
+        matcher.replaceAllIn(accum, replacement)
+    }
+  }
+
+  def copyAthenaTestFile(source: Path, destination: Path): Unit = {
+    Files.createDirectories(destination.getParent)
+    try {
+      val sourceContents = io.Source.fromFile(source.toFile).mkString
+      val destinationContents = FileCopier.fixAthenaTestData(sourceContents)
+      Files.write(destination,
+        destinationContents.getBytes("UTF-8"),
+        StandardOpenOption.CREATE,
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
+    } catch {
+      case _: MalformedInputException =>
+        //it's not a text file
+        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
+    }
+  }
+
+  def copyAthenaTestFiles(source: Path, destination: Path): Unit = {
+    Files.createDirectories(destination)
+    Files.walk(source).filter(Files.isRegularFile(_)).forEach(
+      path => {
+        val relativePath = source.relativize(path)
+        val pathDestination = destination.resolve(relativePath)
+        copyAthenaTestFile(path, pathDestination)
+      }
+    )
+  }
+
+  def copyFixed(source: Path, destination: Path): Unit = {
+    try {
+      val sourceContents = io.Source.fromFile(source.toFile).mkString
+      val destinationContents = doReplacements(source, FileCopier.fixAthenaTestData(sourceContents))
+      Files.createDirectories(destination.getParent)
+      Files.write(destination, destinationContents.getBytes("UTF-8"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+    } catch {
+      case _: MalformedInputException =>
+        //it's not a text file
+        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
+    }
   }
 
 }

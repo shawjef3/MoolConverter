@@ -10,6 +10,11 @@ object Convert {
     val copies = Copy.all.vector().toSet
     val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
     fileCopier.copyAll()
+
+    //copy testdata
+    val testData = moolRoot.resolve("java/com/rocketfuel/modeling/athena/testdata")
+    val testDataDestination = destinationRoot.resolve("testdata")
+    FileCopier.copyAthenaTestFiles(testData, testDataDestination)
   }
 
   def poms(destinationRoot: Path)(implicit connection: Connection): Unit = {
@@ -59,9 +64,14 @@ object Convert {
 
   def gridModeling(destinationRoot: Path): Unit = {
     val modelingRoot = destinationRoot.resolve("grid/modeling")
+
+    if (Files.exists(modelingRoot)) {
+      sys.process.Process("rm -rf grid/modeling", destinationRoot.toFile).!
+    }
+
     sys.process.Process("git", Seq("clone", "--depth", "1", "ssh://git.rfiserve.net:29418/grid/modeling", modelingRoot.toAbsolutePath.toString)).!
 
-    sys.process.Process(Seq("git", "fetch", "ssh://jshaw@gerrit.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/4"), modelingRoot.toFile) !
+    sys.process.Process(Seq("git", "fetch", "ssh://jshaw@gerrit.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/5"), modelingRoot.toFile) !
 
     sys.process.Process(Seq("git", "cherry-pick", "FETCH_HEAD"), modelingRoot.toFile) !
   }

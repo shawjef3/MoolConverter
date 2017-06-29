@@ -30,3 +30,5 @@ Import Converted Project in IntelliJ
 The initial import requires a lot of memory and time. Expect about 15 minutes. After the initial import, pom changes import quickly (a few seconds). If you ask to have sources downloaded, that can take much longer.
 
 In IntelliJ settings, Build, Execution, Deployment/Build Tools/Maven/Importing, set `VM options for importer` to `-Xmx4g`.
+
+It also helps to increase IntelliJ's memory. `Help/Edit Custom VM Options...` Replace `-Xmx2g` with `-Xmx6g`.
