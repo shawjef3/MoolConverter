@@ -74,8 +74,9 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
           )
         )
 
+      import com.rocketfuel.build.mool.{RelCfg => MRelCfg}
       val noDepsBld =
-        for (noDeps <- relCfg.`jar-no-dependencies`) yield {
+        for (noDeps <- List(relCfg.`jar-no-dependencies`, relCfg.deploy).flatten.toSet[MRelCfg.Artifact]) yield {
           //drop(5) removes "mool."
           val dbBld = Bld.selectByPath(noDeps.target.drop(5)).get
 

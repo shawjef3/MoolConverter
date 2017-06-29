@@ -135,7 +135,8 @@ case class Model(
       val bldRelCfgs =
         for {
           (relCfgPath, relCfg) <- relCfgs
-          if relCfg.`jar-with-dependencies`.exists(target => target.targetPath == bldPath)
+          if (relCfg.`jar-with-dependencies`.exists(target => target.targetPath == bldPath) ||
+            relCfg.`deploy`.exists(target => target.targetPath == bldPath))
         } yield relCfgPath
       bldPath -> bldRelCfgs.toSet
     }
@@ -153,8 +154,9 @@ case class Model(
   val relCfgsToBld: Map[MoolPath, Option[MoolPath]] = {
     for {
       (path, relCfg) <- relCfgs
+      artifact <- List(relCfg.`jar-with-dependencies`, relCfg.deploy).flatten.toSet[RelCfg.Artifact]
     } yield {
-      (path, relCfg.`jar-with-dependencies`.map(_.targetPath))
+      (path, Option(artifact.targetPath))
     }
   }
 
@@ -166,7 +168,7 @@ case class Model(
       (relCfgPath, relCfg) <- relCfgs
     } yield relCfgPath -> {
       for {
-        bld <- relCfg.`jar-with-dependencies`.toSet[RelCfg.Artifact]
+        bld <- List(relCfg.`jar-with-dependencies`, relCfg.deploy).flatten.toSet[RelCfg.Artifact]
         transitiveDependency <- bldsToBldsTransitive(bld.targetPath) + bld.targetPath
       } yield transitiveDependency
     }
