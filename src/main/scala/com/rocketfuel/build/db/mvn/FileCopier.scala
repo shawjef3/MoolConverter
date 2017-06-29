@@ -46,7 +46,7 @@ case class FileCopier(
           accum.replace(importSource, importPackagePath)
       }
 
-    Files.write(destination, destinationContents.getBytes)
+    Files.write(destination, destinationContents.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
   }
 
 }
@@ -56,28 +56,8 @@ object FileCopier {
   val replacements = Map(
     "\"/java/com/rocketfuel/modeling/athena/testdata/".r -> "\"/testdata/",
     "\"\\./java/com/rocketfuel/modeling/athena/testdata".r -> "./testdata",
-    "System\\.getenv\\(\"BUILD_ROOT\"\\)".r -> "System.getenv(\"user.dir\")"
+    "System\\.getenv\\(\"BUILD_ROOT\"\\)".r -> "System.getProperty(\"user.dir\")"
   )
-
-  val fileReplacements = Map(
-    "DeviceAtlasDataLoader.java" ->
-      Map(
-        "libStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(LIB_UNIT_TEST_FILE);" ->
-          "libStream = DeviceAtlasDataLoader.class.getResourceAsStream(LIB_UNIT_TEST_FILE);"
-      )
-  )
-
-  def doReplacements(file: Path, source: String): String = {
-    val result =
-      for (replacements <- fileReplacements.get(file.getFileName.toString)) yield {
-        replacements.foldLeft(source) {
-          case (accum, (original, replacement)) =>
-            accum.replace(original, replacement)
-        }
-      }
-
-    result.getOrElse(source)
-  }
 
   def fixAthenaTestData(s: String): String = {
     replacements.foldRight(s) {
@@ -117,7 +97,7 @@ object FileCopier {
   def copyFixed(source: Path, destination: Path): Unit = {
     try {
       val sourceContents = io.Source.fromFile(source.toFile).mkString
-      val destinationContents = doReplacements(source, FileCopier.fixAthenaTestData(sourceContents))
+      val destinationContents = fixAthenaTestData(sourceContents)
       Files.createDirectories(destination.getParent)
       Files.write(destination, destinationContents.getBytes("UTF-8"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     } catch {

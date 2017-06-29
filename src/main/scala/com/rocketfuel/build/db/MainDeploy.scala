@@ -19,7 +19,9 @@ object MainDeploy extends App {
 
     Deploy.deploy()
 
-    val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
+    val moolRoot = Paths.get("/tmp/vostok")
+
+    Clone.vostok(moolRoot)
 
     val moolModel = com.rocketfuel.build.mool.Model.ofRepository(moolRoot)
 

@@ -580,3 +580,13 @@ SELECT mool_dedup.add_dependency(
   array['java', 'mvn', 'commons-cli', 'CommandLineInterface'],
   false
 );
+
+/*
+KeyListFormatTest requires its resource files.
+ */
+
+SELECT mool_dedup.add_dependency(
+  array['java', 'com', 'rocketfuel', 'grid', 'common', 'hbase', 'keylistformat', 'KeyListFormatTest'],
+  array['java', 'com', 'rocketfuel', 'grid', 'common', 'hbase', 'keylistformat', 'resources', 'TestFiles'],
+  false
+)
