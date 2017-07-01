@@ -21,6 +21,8 @@ object MainGradleConvert extends App {
   pool.withConnection { implicit connection =>
     GradleConvert.files(moolRoot, destinationRoot)
 
+    GradleConvert.rootBuildFiles(moolRoot)
+
     GradleConvert.builds(destinationRoot)
   }
 

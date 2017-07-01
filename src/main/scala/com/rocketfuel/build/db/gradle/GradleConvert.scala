@@ -6,21 +6,21 @@ import com.rocketfuel.build.db.mvn.{Copy, FileCopier, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
 object GradleConvert {
+  def rootBuildFiles(moolRoot: Path)(implicit connection: Connection) = {
+    val settingsGradle = moolRoot.resolve("settings.gradle")
 
-  def normalizeProjectName(prjName: String) : String = {
-    // java-com-rocketfuel-grid-externalreport-grid.externalreport => java-com-rocketfuel-grid-externalreport-grid.externalreport
-    val prjNameSegments = prjName.split('-').toVector
-    // TODO handle path with ','
-    if (prjNameSegments.size > 1 && prjNameSegments(prjNameSegments.size - 2) == prjNameSegments(prjNameSegments.size - 1))
-      prjNameSegments.dropRight(1).mkString("-")
-    else
-      prjName
+    val settings = ProjectMapping.projectNames().foldLeft("rootProject.name = 'vostok'\n\n") { (buffer, prjName) =>
+      buffer + s"include ':$prjName'\n"
+    }
+
+    Files.write(settingsGradle, settings.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
   }
+
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val copies = GradleCopy.all.vector().filter(!_.destination.contains(',')).map { c =>
       val prjPath = c.destination.split("/").toList
-      val fixedDestination = (normalizeProjectName(prjPath.head) :: prjPath.tail).mkString("/")
+      val fixedDestination = (ProjectMapping.normalizeProjectName(prjPath.head) :: prjPath.tail).mkString("/")
       c.copy(destination = fixedDestination)
     }.toSet
     val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
