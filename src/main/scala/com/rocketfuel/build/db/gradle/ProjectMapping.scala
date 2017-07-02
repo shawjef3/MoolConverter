@@ -65,12 +65,14 @@ object ProjectMapping extends Deployable with Logger {
       shortPrjName else prjNameSegments.mkString("-")
   }
 
-  def projectNames()(implicit connection: Connection): collection.SortedSet[String] = {
+  def projectNamesMapping()(implicit connection: Connection): Map[String, String] = {
     val prjBldMap: Map[String, Vector[String]] = list.vector().filter { pm => !pm.bld_path.startsWith("java-mvn")
     }.foldLeft(Map.empty[String, Vector[String]]) { (map, pm) =>
       map + (pm.prj_path -> (map.getOrElse(pm.prj_path, Vector.empty) :+ pm.bld_path))
     }
-    val prjNames = prjBldMap.map { case (k, v) => normalizeProjectName(k, v) }.toSeq
-    collection.SortedSet(prjNames: _*)
+    prjBldMap.map { case (k, v) => k -> normalizeProjectName(k, v) }
   }
+
+  def projectNames()(implicit connection: Connection): collection.SortedSet[String] =
+    collection.SortedSet(projectNamesMapping().values.toSeq: _*)
 }

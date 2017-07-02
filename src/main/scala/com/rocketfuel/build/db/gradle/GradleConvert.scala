@@ -18,9 +18,10 @@ object GradleConvert {
 
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val copies = GradleCopy.all.vector().filter(!_.destination.contains(',')).map { c =>
+    val prjNameMapping = ProjectMapping.projectNamesMapping()
+    val copies = GradleCopy.all.vector().map { c =>
       val prjPath = c.destination.split("/").toList
-      val fixedDestination = (ProjectMapping.normalizeProjectName(prjPath.head) :: prjPath.tail).mkString("/")
+      val fixedDestination = (prjNameMapping(prjPath.head) :: prjPath.tail).mkString("/")
       c.copy(destination = fixedDestination)
     }.toSet
     val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
