@@ -5,15 +5,29 @@ import java.nio.file._
 import com.rocketfuel.build.db.mvn.{Copy, FileCopier, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
+/*
+TODO: fix extra projects generated from ProjectMappings with no sources
+TODO: check if there are copied sources not mapped into build
+ */
+
 object GradleConvert {
+  private def loadResource(path: String): String = {
+    val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
+    try source.mkString
+    finally source.close()
+  }
+
   def rootBuildFiles(moolRoot: Path)(implicit connection: Connection) = {
     val settingsGradle = moolRoot.resolve("settings.gradle")
 
-    val settings = ProjectMapping.projectNames().foldLeft("rootProject.name = 'vostok'\n\n") { (buffer, prjName) =>
+    val settings = ProjectMapping.projectNames().foldLeft("") { (buffer, prjName) =>
       buffer + s"include ':$prjName'\n"
     }
 
-    Files.write(settingsGradle, settings.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+    Files.write(settingsGradle,
+      (settings + loadResource("settings_end.gradle")).getBytes,
+      StandardOpenOption.TRUNCATE_EXISTING,
+      StandardOpenOption.CREATE)
   }
 
 

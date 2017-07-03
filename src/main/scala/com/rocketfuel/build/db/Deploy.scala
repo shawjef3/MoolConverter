@@ -27,7 +27,9 @@ object Deploy extends Deployable {
       gradle.Schema +
       gradle.BuildTree +
       gradle.ProjectMapping +
-      gradle.GradleCopy
+      gradle.GradleCopy +
+      gradle.Dependency +
+      gradle.Library
 
   override def deploy()(implicit connection: Connection): Unit =
     deploy.deploy()
