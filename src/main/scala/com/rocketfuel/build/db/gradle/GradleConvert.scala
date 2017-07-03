@@ -2,6 +2,7 @@ package com.rocketfuel.build.db.gradle
 
 import java.nio.file._
 
+import com.rocketfuel.build.Logger
 import com.rocketfuel.build.db.mvn.{Copy, FileCopier, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
@@ -10,7 +11,7 @@ TODO: fix extra projects generated from ProjectMappings with no sources
 TODO: check if there are copied sources not mapped into build
  */
 
-object GradleConvert {
+object GradleConvert extends Logger {
   private def loadResource(path: String): String = {
     val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
     try source.mkString
@@ -32,11 +33,12 @@ object GradleConvert {
 
     val librariesGradle = moolRoot.resolve("gradle/libraries.gradle")
     val libraries = Library.list.vector().filter { lib =>
-      lib.path.startsWith("java.mvn.") && lib.group_id.isDefined && lib.artifact_id.isDefined && lib.version.isDefined
+      lib.isMavenDep
     }.sorted.foldLeft("ext.libraries = [\n") { (buffer, lib) =>
       // TODO handle scala version
       // TODO handle classifiers
-      buffer + s"  ${Library.libReference(lib.path)}: '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}',\n"
+      buffer + "  \"" + Library.libReference(lib.path) + "\"" +
+        s": '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}',\n"
     }
     Files.write(librariesGradle,
       (libraries + "]\n").getBytes,
@@ -56,7 +58,46 @@ object GradleConvert {
     fileCopier.copyAll()
   }
 
-  def builds(destinationRoot: Path)(implicit connection: Connection): Unit = {
+  def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
+    val prjNameMapping = ProjectMapping.projectNamesMapping() // .map(_.swap)
+    Dependency.list.vector().groupBy {_.prj_path}.filter {
+      case (prjPath, deps) =>
+        if (!prjNameMapping.contains(prjPath)) {
+          if (!deps.isEmpty)
+            logger.warn(s"Cannot find project for ${prjPath}")
+          false
+        } else {
+          true
+        }
+    }.foreach {
+        case (prjPath, deps) =>
+          val prjBuildGradle = moolRoot.resolve("projects/" + prjNameMapping(prjPath) + "/build.gradle")
+          val buildGradleText =
+            """dependencies {
+              |""".stripMargin
+          val buildGradleTextWithDeps = deps.sortBy(_.path).foldLeft((buildGradleText, true)) {
+            case ((buff, isFirst), lib) =>
+              if (!Files.isDirectory(prjBuildGradle.getParent) && isFirst) {
+                logger.warn(s"Project dir ${prjBuildGradle.getParent} does not exist")
+              }
+
+              // TODO project cross-deps
+              if (lib.isMavenDep) {
+                val dependency = Library.libReference(lib.path)
+                (buff + s"  compile libraries['${dependency}']\n", false)
+              } else {
+                (buff, false)
+              }
+          }._1
+
+          if (Files.isDirectory(prjBuildGradle.getParent)) {
+            Files.write(prjBuildGradle,
+              (buildGradleTextWithDeps + "}\n").getBytes,
+              StandardOpenOption.TRUNCATE_EXISTING,
+              StandardOpenOption.CREATE)
+          }
+    }
+
 //
 //    val modulePaths = {
 //      for (ModulePath(id, path) <- ModulePath.list.iterator()) yield

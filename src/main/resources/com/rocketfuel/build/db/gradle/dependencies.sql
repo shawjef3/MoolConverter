@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW gradle.dependencies AS (
   SELECT DISTINCT
     bt.id                         AS prj_id,
-    array_to_string(bt.path, '.') AS prj_path,
+    array_to_string(bt.path, '-') AS prj_path,
     b.id,
     array_to_string(b.path, '.')  AS path,
     b.rule_type,

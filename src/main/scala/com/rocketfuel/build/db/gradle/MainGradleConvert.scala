@@ -23,7 +23,7 @@ object MainGradleConvert extends App {
 
     GradleConvert.rootBuildFiles(moolRoot)
 
-    GradleConvert.builds(destinationRoot)
+    GradleConvert.builds(moolRoot, destinationRoot)
   }
 
   // Convert.gridModeling(destinationRoot)

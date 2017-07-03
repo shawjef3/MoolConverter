@@ -6,7 +6,10 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 case class Library(id: String, path: String, rule_type: String, scala_version: Option[String],
                       java_version: Option[String], group_id: Option[String], artifact_id: Option[String],
-                      version: Option[String], repo_url: Option[String], classifier: Option[String])
+                      version: Option[String], repo_url: Option[String], classifier: Option[String]) {
+  def isMavenDep() =
+    path.startsWith("java.mvn.") && group_id.isDefined && artifact_id.isDefined && version.isDefined
+}
 
 object Library extends Deployable with Logger {
   val list = Select[Library]("SELECT * FROM gradle.libraries")
@@ -20,8 +23,7 @@ object Library extends Deployable with Logger {
     Ignore.ignore("DROP VIEW IF EXISTS gradle.libraries CASCADE")
 
   def libReference(libPath: String, quoted: Boolean = true) = {
-    val libName = libPath.stripPrefix("java.mvn.")
-    "\"library." + libName + "\""
+    libPath.stripPrefix("java.mvn.")
   }
 
   implicit def orderingByName[A <: Library]: Ordering[A] =
