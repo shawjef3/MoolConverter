@@ -4,12 +4,12 @@ import com.rocketfuel.build.Logger
 import com.rocketfuel.build.db.Deployable
 import com.rocketfuel.sdbc.PostgreSql._
 
-case class Library(id: String, path: String, rule_type: String, scala_version: String,
-                      java_version: String, group_id: String, artifact_id: String,
-                      version: String, repo_url: String, classifier: String)
+case class Library(id: String, path: String, rule_type: String, scala_version: Option[String],
+                      java_version: Option[String], group_id: Option[String], artifact_id: Option[String],
+                      version: Option[String], repo_url: Option[String], classifier: Option[String])
 
 object Library extends Deployable with Logger {
-  val list = Select[Library]("SELECT * FROM gradle.dependencies")
+  val list = Select[Library]("SELECT * FROM gradle.libraries")
 
   val deployQuery = Ignore.readClassResource(classOf[ProjectMapping], "libraries.sql")
 
@@ -18,4 +18,12 @@ object Library extends Deployable with Logger {
 
   override def undeploy()(implicit connection: Connection): Unit =
     Ignore.ignore("DROP VIEW IF EXISTS gradle.libraries CASCADE")
+
+  def libReference(libPath: String, quoted: Boolean = true) = {
+    val libName = libPath.stripPrefix("java.mvn.")
+    "\"library." + libName + "\""
+  }
+
+  implicit def orderingByName[A <: Library]: Ordering[A] =
+    Ordering.by(l => (l.path))
 }

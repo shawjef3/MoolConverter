@@ -18,14 +18,28 @@ object GradleConvert {
   }
 
   def rootBuildFiles(moolRoot: Path)(implicit connection: Connection) = {
-    val settingsGradle = moolRoot.resolve("settings.gradle")
+    val prjMappings = ProjectMapping.projectNames()
 
-    val settings = ProjectMapping.projectNames().foldLeft("") { (buffer, prjName) =>
+    val settingsGradle = moolRoot.resolve("settings.gradle")
+    val settings = prjMappings.foldLeft("") { (buffer, prjName) =>
       buffer + s"include ':$prjName'\n"
     }
 
     Files.write(settingsGradle,
       (settings + loadResource("settings_end.gradle")).getBytes,
+      StandardOpenOption.TRUNCATE_EXISTING,
+      StandardOpenOption.CREATE)
+
+    val librariesGradle = moolRoot.resolve("gradle/libraries.gradle")
+    val libraries = Library.list.vector().filter { lib =>
+      lib.path.startsWith("java.mvn.") && lib.group_id.isDefined && lib.artifact_id.isDefined && lib.version.isDefined
+    }.sorted.foldLeft("ext.libraries = [\n") { (buffer, lib) =>
+      // TODO handle scala version
+      // TODO handle classifiers
+      buffer + s"  ${Library.libReference(lib.path)}: '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}',\n"
+    }
+    Files.write(librariesGradle,
+      (libraries + "]\n").getBytes,
       StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.CREATE)
   }
