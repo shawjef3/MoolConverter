@@ -24,11 +24,12 @@ object GradleConvert extends Logger {
   }
 
   def rootBuildFiles(moolRoot: Path)(implicit connection: Connection) = {
-    val prjMappings = ProjectMapping.projectNames()
+    val prjNameMapping = ProjectMapping.projectNamesMapping().map(_.swap)
 
     val settingsGradle = moolRoot.resolve("settings.gradle")
-    val settings = prjMappings.foldLeft("") { (buffer, prjName) =>
-      buffer + s"include ':$prjName'\n"
+    val settings = prjNameMapping.toList.sorted.foldLeft("") { (buffer, prjNames) =>
+      val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
+      buffer + s"include ':${prjNames._1}'$comment\n"
     }
 
     Files.write(settingsGradle,
@@ -94,23 +95,34 @@ object GradleConvert extends Logger {
 
               // TODO project cross-deps
               if (lib.isMavenDep) {
-                val dependency = Library.libReference(lib.path)
+                val dependency = "  compile libraries['" + Library.libReference(lib.path) + "']"
                 // s"  compile libraries['${dependency}']\n"
                 (build.copy(compileDeps = build.compileDeps + dependency), false)
-              } else if (bldIdToPrjPath(lib.id) == prjPath) {
-                // BLD from our project. check for proto, scala and more to adjust project
-                logger.warn(s"Customize ${prjPath} for ${lib}")
-                (build, false)
               } else {
-                hasNonMavenDep = true
-                (build, false)
+                val depPrjPath = bldIdToPrjPath(lib.id)
+                if (depPrjPath == prjPath) {
+                  // BLD from our project. check for proto, scala and more to adjust project
+                  logger.info(s"Customize ${prjPath} for ${lib}")
+                  (build, false)
+                } else {
+                  hasNonMavenDep = true
+                  val newDeps = prjNameMapping.get(depPrjPath) match {
+                    case Some(dependency) =>
+                      val dependencyStr = "  compile project(':" + dependency + "')"
+                      logger.trace(s"Add dependency on ${depPrjPath} to ${prjPath}")
+                      build.compileDeps + dependencyStr
+                    case _ =>
+                      logger.warn(s"Cannot add dependency on ${depPrjPath} to ${prjPath}")
+                      build.compileDeps
+                  }
+                  (build.copy(compileDeps = newDeps), false)
+                }
               }
           }._1
 
           if (Files.isDirectory(prjBuildGradle.getParent)) {
             Files.write(prjBuildGradle,
-              (buildGradleText + buildGradleParts.compileDeps.map { dep =>
-                s"  compile libraries['${dep}']"}.mkString("\n") + "}\n").getBytes,
+              (buildGradleText + buildGradleParts.compileDeps.mkString("\n") + "\n}\n").getBytes,
               StandardOpenOption.TRUNCATE_EXISTING,
               StandardOpenOption.CREATE)
           }

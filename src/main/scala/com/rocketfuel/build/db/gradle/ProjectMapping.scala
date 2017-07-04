@@ -4,10 +4,17 @@ import com.rocketfuel.build.Logger
 import com.rocketfuel.build.db.Deployable
 import com.rocketfuel.sdbc.PostgreSql._
 
-case class ProjectMapping(prj_path: String, bld_id: Int, bld_path: String)
+case class ProjectMapping(prj_path: String, bld_id: Int, bld_path: String,
+                          rule_type: String, scala_version: Option[String],
+                          java_version: Option[String], group_id: Option[String], artifact_id: Option[String],
+                          version: Option[String], repo_url: Option[String], classifier: Option[String]) {
+  def isMavenDep() =
+    bld_path.startsWith("java.mvn.") && group_id.isDefined && artifact_id.isDefined && version.isDefined
+}
 
 object ProjectMapping extends Deployable with Logger {
-  val list = Select[ProjectMapping]("SELECT prj_path, bld_id, bld_path FROM gradle.project_mapping")
+  val list = Select[ProjectMapping]("SELECT prj_path, bld_id, bld_path, rule_type, scala_version, java_version, " +
+                                    "group_id, artifact_id, version, repo_url, classifier FROM gradle.project_mapping")
 
   val deployQuery = Ignore.readClassResource(classOf[ProjectMapping], "project_mapping.sql")
 
@@ -66,13 +73,10 @@ object ProjectMapping extends Deployable with Logger {
   }
 
   def projectNamesMapping()(implicit connection: Connection): Map[String, String] = {
-    val prjBldMap: Map[String, Vector[String]] = list.vector().filter { pm => !pm.bld_path.startsWith("java-mvn")
+    val prjBldMap: Map[String, Vector[String]] = list.vector().filter { pm => !pm.isMavenDep()
     }.foldLeft(Map.empty[String, Vector[String]]) { (map, pm) =>
       map + (pm.prj_path -> (map.getOrElse(pm.prj_path, Vector.empty) :+ pm.bld_path))
     }
     prjBldMap.map { case (k, v) => k -> normalizeProjectName(k, v) }
   }
-
-  def projectNames()(implicit connection: Connection): collection.SortedSet[String] =
-    collection.SortedSet(projectNamesMapping().values.toSeq: _*)
 }
