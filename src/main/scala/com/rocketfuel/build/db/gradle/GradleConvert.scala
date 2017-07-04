@@ -11,6 +11,11 @@ TODO: fix extra projects generated from ProjectMappings with no sources
 TODO: check if there are copied sources not mapped into build
  */
 
+case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
+                            compileDeps: Set[String] = Set.empty,
+                            compileTestDeps: Set[String] = Set.empty,
+                            useTestNg: Boolean = false)
+
 object GradleConvert extends Logger {
   private def loadResource(path: String): String = {
     val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
@@ -59,7 +64,11 @@ object GradleConvert extends Logger {
   }
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val prjNameMapping = ProjectMapping.projectNamesMapping() // .map(_.swap)
+    val prjNameMapping = ProjectMapping.projectNamesMapping()
+    val bldIdToPrjPath = ProjectMapping.list.vector().foldLeft(Map.empty[Int, String]) { (map, pm) =>
+      map + (pm.bld_id -> pm.prj_path)
+    }
+
     Dependency.list.vector().groupBy {_.prj_path}.filter {
       case (prjPath, deps) =>
         if (!prjNameMapping.contains(prjPath)) {
@@ -72,11 +81,13 @@ object GradleConvert extends Logger {
     }.foreach {
         case (prjPath, deps) =>
           val prjBuildGradle = moolRoot.resolve("projects/" + prjNameMapping(prjPath) + "/build.gradle")
+
+          var hasNonMavenDep = false
           val buildGradleText =
             """dependencies {
               |""".stripMargin
-          val buildGradleTextWithDeps = deps.sortBy(_.path).foldLeft((buildGradleText, true)) {
-            case ((buff, isFirst), lib) =>
+          val buildGradleParts = deps.sortBy(_.path).foldLeft((BuildGradleParts(), true)) {
+            case ((build, isFirst), lib) =>
               if (!Files.isDirectory(prjBuildGradle.getParent) && isFirst) {
                 logger.warn(s"Project dir ${prjBuildGradle.getParent} does not exist")
               }
@@ -84,61 +95,25 @@ object GradleConvert extends Logger {
               // TODO project cross-deps
               if (lib.isMavenDep) {
                 val dependency = Library.libReference(lib.path)
-                (buff + s"  compile libraries['${dependency}']\n", false)
+                // s"  compile libraries['${dependency}']\n"
+                (build.copy(compileDeps = build.compileDeps + dependency), false)
+              } else if (bldIdToPrjPath(lib.id) == prjPath) {
+                // BLD from our project. check for proto, scala and more to adjust project
+                logger.warn(s"Customize ${prjPath} for ${lib}")
+                (build, false)
               } else {
-                (buff, false)
+                hasNonMavenDep = true
+                (build, false)
               }
           }._1
 
           if (Files.isDirectory(prjBuildGradle.getParent)) {
             Files.write(prjBuildGradle,
-              (buildGradleTextWithDeps + "}\n").getBytes,
+              (buildGradleText + buildGradleParts.compileDeps.map { dep =>
+                s"  compile libraries['${dep}']"}.mkString("\n") + "}\n").getBytes,
               StandardOpenOption.TRUNCATE_EXISTING,
               StandardOpenOption.CREATE)
           }
     }
-
-//
-//    val modulePaths = {
-//      for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
-//        id -> path
-//    }.toMap
-//
-//    val identifiers = {
-//      for (i <- mvn.Identifier.list.iterator()) yield {
-//        i.bldId -> i
-//      }
-//    }.toMap
-//
-//    val dependencies =
-//      mvn.Dependency.list.vector().groupBy(_.sourceId)
-//
-//    val localBlds = mool.Bld.localBlds.vector()
-//
-//    for (bld <- localBlds) {
-//      val identifier = identifiers(bld.id)
-//      val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
-//
-//      val path = modulePaths(bld.id)
-//      val modulePath = destinationRoot.resolve(path)
-//      val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath)
-//      val pomPath = modulePath.resolve("pom.xml")
-//
-//      Files.createDirectories(modulePath)
-//      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
-//    }
-//
-//    Parents.writeRoot(destinationRoot)
-//    Parents.writeCheckStyle(destinationRoot)
-//    Parents.`Scala-common`.write(destinationRoot, Set())
-//
-//    val parentPoms =
-//      localBlds.foldLeft(Parents.Poms.Empty) {
-//        case (poms, bld) =>
-//          val moduleRoot = modulePaths(bld.id)
-//          poms.add(bld, moduleRoot)
-//      }
-//
-//    parentPoms.write(destinationRoot)
   }
 }

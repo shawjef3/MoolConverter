@@ -4,8 +4,8 @@ import com.rocketfuel.build.Logger
 import com.rocketfuel.build.db.Deployable
 import com.rocketfuel.sdbc.PostgreSql._
 
-case class Dependency(prj_id: String, prj_path: String,
-                      id: String, path: String, rule_type: String, scala_version: Option[String],
+case class Dependency(prj_path: String,
+                      id: Int, path: String, rule_type: String, scala_version: Option[String],
                       java_version: Option[String], group_id: Option[String], artifact_id: Option[String],
                       version: Option[String], repo_url: Option[String], classifier: Option[String],
                       is_compile: Boolean) {
