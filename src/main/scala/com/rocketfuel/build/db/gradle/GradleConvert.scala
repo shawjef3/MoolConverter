@@ -14,9 +14,23 @@ TODO: check if there are copied sources not mapped into build
 case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
                             compileDeps: Set[String] = Set.empty,
                             compileTestDeps: Set[String] = Set.empty,
+                            plugins: Set[String] = Set.empty,
+                            snippets: Set[String] = Set.empty,
                             useTestNg: Boolean = false)
 
 object GradleConvert extends Logger {
+  // not s""": leave interpolation to Groovy/Gradle
+  private val protoConfigSnippet =
+    """
+      |protobuf {
+      |  protoc {
+      |    path = "${System.env.HOME}/.mooltool/packages/protobuf/bin/protoc"
+      |  }
+      |}
+      |
+                    """.stripMargin
+  private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
+
   private def loadResource(path: String): String = {
     val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
     try source.mkString
@@ -84,26 +98,25 @@ object GradleConvert extends Logger {
           val prjBuildGradle = moolRoot.resolve("projects/" + prjNameMapping(prjPath) + "/build.gradle")
 
           var hasNonMavenDep = false
-          val buildGradleText =
-            """dependencies {
-              |""".stripMargin
           val buildGradleParts = deps.sortBy(_.path).foldLeft((BuildGradleParts(), true)) {
             case ((build, isFirst), lib) =>
-              if (!Files.isDirectory(prjBuildGradle.getParent) && isFirst) {
-                logger.warn(s"Project dir ${prjBuildGradle.getParent} does not exist")
-              }
-
               // TODO project cross-deps
               if (lib.isMavenDep) {
                 val dependency = "  compile libraries['" + Library.libReference(lib.path) + "']"
-                // s"  compile libraries['${dependency}']\n"
                 (build.copy(compileDeps = build.compileDeps + dependency), false)
               } else {
                 val depPrjPath = bldIdToPrjPath(lib.id)
                 if (depPrjPath == prjPath) {
                   // BLD from our project. check for proto, scala and more to adjust project
-                  logger.info(s"Customize ${prjPath} for ${lib}")
-                  (build, false)
+                  logger.trace(s"Customize ${prjPath} for ${lib}")
+                  lib.rule_type match {
+                    case r if r == "java_proto_lib" =>
+                      (build.copy(compileDeps = build.compileDeps + protoLib,
+                                  plugins = build.plugins + "com.google.protobuf",
+                                  snippets = build.snippets + protoConfigSnippet), false)
+                    case _ =>
+                      (build, false)
+                  }
                 } else {
                   hasNonMavenDep = true
                   val newDeps = prjNameMapping.get(depPrjPath) match {
@@ -120,12 +133,21 @@ object GradleConvert extends Logger {
               }
           }._1
 
-          if (Files.isDirectory(prjBuildGradle.getParent)) {
-            Files.write(prjBuildGradle,
-              (buildGradleText + buildGradleParts.compileDeps.mkString("\n") + "\n}\n").getBytes,
-              StandardOpenOption.TRUNCATE_EXISTING,
-              StandardOpenOption.CREATE)
-          }
+          val buildGradleText =
+            buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") +
+            buildGradleParts.snippets.mkString("\n") +
+            """
+              |
+              |dependencies {
+              |""".stripMargin +
+            buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
+            "\n}\n"
+
+          Files.createDirectories(prjBuildGradle.getParent)
+          Files.write(prjBuildGradle,
+            buildGradleText.getBytes,
+            StandardOpenOption.TRUNCATE_EXISTING,
+            StandardOpenOption.CREATE)
     }
   }
 }
