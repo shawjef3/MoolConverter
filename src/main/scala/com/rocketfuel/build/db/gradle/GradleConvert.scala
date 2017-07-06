@@ -27,8 +27,13 @@ object GradleConvert extends Logger {
       |    path = "${System.env.HOME}/.mooltool/packages/protobuf/bin/protoc"
       |  }
       |}
-      |
-                    """.stripMargin
+      |""".stripMargin
+  private val thriftConfigSnippet =
+    """
+      |compileThrift {
+      |  thriftExecutable "${System.env.HOME}/.mooltool/packages/thrift-0.9.1/bin/thrift"
+      |}
+      |""".stripMargin
   private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
 
   private def loadResource(path: String): String = {
@@ -112,8 +117,11 @@ object GradleConvert extends Logger {
                   lib.rule_type match {
                     case r if r == "java_proto_lib" =>
                       (build.copy(compileDeps = build.compileDeps + protoLib,
-                                  plugins = build.plugins + "com.google.protobuf",
-                                  snippets = build.snippets + protoConfigSnippet), false)
+                        plugins = build.plugins + "com.google.protobuf",
+                        snippets = build.snippets + protoConfigSnippet), false)
+                    case r if r == "java_thrift_lib" =>
+                      (build.copy(plugins = build.plugins + "org.jruyi.thrift",
+                        snippets = build.snippets + thriftConfigSnippet), false)
                     case _ =>
                       (build, false)
                   }
