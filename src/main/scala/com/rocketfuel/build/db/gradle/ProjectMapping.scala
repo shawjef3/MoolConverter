@@ -26,7 +26,7 @@ object ProjectMapping extends Deployable with Logger {
 
   def normalizeProjectName(prjName: String, bldPaths: Vector[String] = Vector.empty): String = {
     val normalized = normalizeProjectNameImpl(prjName, bldPaths)
-    if (normalized.length > 50) normalized.substring(0, 50) else normalized
+    if (normalized.length > 70) normalized.substring(0, 70) else normalized
   }
 
   private def normalizeProjectNameImpl(prjName: String, bldPaths: Vector[String] = Vector.empty): String = {
