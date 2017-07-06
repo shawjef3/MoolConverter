@@ -122,6 +122,8 @@ object GradleConvert extends Logger {
                     case r if r == "java_thrift_lib" =>
                       (build.copy(plugins = build.plugins + "org.jruyi.thrift",
                         snippets = build.snippets + thriftConfigSnippet), false)
+                    case r if r == "scala_lib" =>
+                      (build.copy(plugins = build.plugins + "scala"), false)
                     case _ =>
                       (build, false)
                   }
