@@ -32,8 +32,8 @@ CREATE OR REPLACE VIEW gradle.build_tree AS (
       b.repo_url,
       b.classifier
     FROM build_tree bt
-      JOIN mool.bld_to_bld bb ON bt.bld_id = bb.source_id
-      JOIN mool.blds b ON bb.target_id = b.id
+      JOIN mool_dedup.bld_to_bld bb ON bt.bld_id = bb.source_id
+      JOIN mool_dedup.blds b ON bb.target_id = b.id
   )
 SELECT *
 FROM build_tree

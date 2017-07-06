@@ -7,11 +7,14 @@ Add common sources and dependencies to DimLibCommon, remove from DimLib and DimL
 DimLibCommon and DimLibOld depend on DimCommon.
 */
 
+/*
+TODO:rkubacki commented to avoid problems in Gradle conversion
 SELECT mool_dedup.factor(
   array['java','com','rocketfuel','grid','lookup','dim','DimLib'],
   array['java','com','rocketfuel','grid','lookup','dim','DimLibOld'],
   array['java','com','rocketfuel','grid','lookup','dim','DimLibCommon']
-);
+)
+*/
 
 /*
 {java,com,rocketfuel,modeling,athena,core,common,RetargetingCommon}
