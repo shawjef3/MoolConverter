@@ -25,7 +25,7 @@ object Clone {
   }
 
   def gridModeling(destinationRoot: Path): Unit = {
-    clone("ssh://git.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/8", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/10", destinationRoot)
   }
 
   def vostok(destinationRoot: Path): Unit = {

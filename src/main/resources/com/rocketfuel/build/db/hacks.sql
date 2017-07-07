@@ -17,8 +17,8 @@ FROM mool.blds
 WHERE group_id = 'org.json4s';
 
 --Step 2: Insert dependencies for json4s_2.11 where a scala 2.10 project depends on json4s_2.10.
-INSERT INTO mool.bld_to_bld (source_id, target_id, is_compile)
-SELECT source.id, json4s.id, false --compile just happens to be always false for json4s
+INSERT INTO mool.bld_to_bld (source_id, target_id, is_compile, is_extract)
+SELECT source.id, json4s.id, false, false --compile just happens to be always false for json4s
 FROM mool.blds source
   INNER JOIN mool.bld_to_bld
     ON source.id = bld_to_bld.source_id

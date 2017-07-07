@@ -45,7 +45,7 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
       for (depPath <- bld.depPaths(bldPath)) {
         val dbDep = dbBlds(depPath)
 
-        try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = false))
+        try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = false, isExtract = false))
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
             logger.warn(s"duplicate bld dependency $bldPath -> $depPath")
@@ -54,7 +54,16 @@ class Model(model: com.rocketfuel.build.mool.Model) extends Logger {
 
       for (depPath <- bld.compileDepPaths(bldPath)) {
         val dbDep = dbBlds(depPath)
-        try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = true))
+        try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = true, isExtract = false))
+        catch {
+          case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
+            logger.warn(s"duplicate bld dependency $bldPath -> $depPath")
+        }
+      }
+
+      for (depPath <- bld.extractDepPaths(bldPath)) {
+        val dbDep = dbBlds(depPath)
+        try BldToBld.insert(BldToBld(0, dbBld.id, dbDep.id, isCompile = false, isExtract = true))
         catch {
           case e: PSQLException if e.getMessage.startsWith("ERROR: duplicate key value violates unique constraint") =>
             logger.warn(s"duplicate bld dependency $bldPath -> $depPath")
