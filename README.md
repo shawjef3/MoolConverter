@@ -32,3 +32,7 @@ The initial import requires a lot of memory and time. Expect about 15 minutes. A
 In IntelliJ settings, Build, Execution, Deployment/Build Tools/Maven/Importing, set `VM options for importer` to `-Xmx4g`.
 
 It also helps to increase IntelliJ's memory. `Help/Edit Custom VM Options...` Replace `-Xmx2g` with `-Xmx6g`.
+
+IntelliJ won't generate Java files for Protobuf files. Run the following in the project root, and IntelliJ will find the generated sources. There will be many errors, since not all of the modules that depend on a protobuf modules are protobuf modules.
+
+`mvn --fail-at-end -amd -pl :protobuf protobuf:compile`
