@@ -36,3 +36,5 @@ It also helps to increase IntelliJ's memory. `Help/Edit Custom VM Options...` Re
 IntelliJ won't generate Java files for Protobuf files. Run the following in the project root, and IntelliJ will find the generated sources. There will be many errors, since not all of the modules that depend on a protobuf modules are protobuf modules.
 
 `mvn --fail-at-end -amd -pl :protobuf protobuf:compile`
+
+When that completes, refresh the Maven project in IntelliJ.
