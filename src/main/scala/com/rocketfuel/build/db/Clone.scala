@@ -29,7 +29,7 @@ object Clone {
   }
 
   def vostok(destinationRoot: Path): Unit = {
-    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/5", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/6", destinationRoot)
   }
 
 }
