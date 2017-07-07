@@ -11,7 +11,8 @@ case class Dependency(prj_path: String,
                       is_compile: Boolean) {
 
   def isMavenDep() =
-    path.startsWith("java.mvn.") && group_id.isDefined && artifact_id.isDefined && version.isDefined
+    (path.startsWith("java.mvn.") || path.startsWith("java.com.rocketfuel.ei.datamon")) &&
+      group_id.isDefined && artifact_id.isDefined && version.isDefined
 }
 
 object Dependency extends Deployable with Logger {

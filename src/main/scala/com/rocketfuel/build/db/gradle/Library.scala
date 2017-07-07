@@ -8,7 +8,8 @@ case class Library(id: String, path: String, rule_type: String, scala_version: O
                       java_version: Option[String], group_id: Option[String], artifact_id: Option[String],
                       version: Option[String], repo_url: Option[String], classifier: Option[String]) {
   def isMavenDep() =
-    path.startsWith("java.mvn.") && group_id.isDefined && artifact_id.isDefined && version.isDefined
+    (path.startsWith("java.mvn.") || path.startsWith("java.com.rocketfuel.ei.datamon")) &&
+      group_id.isDefined && artifact_id.isDefined && version.isDefined
 }
 
 object Library extends Deployable with Logger {

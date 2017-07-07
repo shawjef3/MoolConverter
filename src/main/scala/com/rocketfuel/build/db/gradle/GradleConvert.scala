@@ -61,9 +61,9 @@ object GradleConvert extends Logger {
       lib.isMavenDep
     }.sorted.foldLeft("ext.libraries = [\n") { (buffer, lib) =>
       // TODO handle scala version
-      // TODO handle classifiers
+      val classifier = ":" + lib.classifier.getOrElse("")
       buffer + "  \"" + Library.libReference(lib.path) + "\"" +
-        s": '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}',\n"
+        s": '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}${classifier}',\n"
     }
     Files.write(librariesGradle,
       (libraries + "]\n").getBytes,
@@ -107,8 +107,16 @@ object GradleConvert extends Logger {
             case ((build, isFirst), lib) =>
               // TODO project cross-deps
               if (lib.isMavenDep) {
-                val dependency = "  compile libraries['" + Library.libReference(lib.path) + "']"
-                (build.copy(compileDeps = build.compileDeps + dependency), false)
+                val addedDependency = (prjNameMapping(prjPath), Library.libReference(lib.path))
+
+                if (addedDependency !=
+                  ("j-c-r-camus,grid-datascrub-grid.scrub", "com.rocketfuel.grid.thirdparty.hive.HiveExec")) {
+                  val dependency = "  compile libraries['" + addedDependency._2 + "']"
+                  (build.copy(compileDeps = build.compileDeps + dependency), false)
+                } else {
+                  logger.info(s"Ignored dependency ${addedDependency}")
+                  (build, false)
+                }
               } else {
                 val depPrjPath = bldIdToPrjPath(lib.id)
                 if (depPrjPath == prjPath) {

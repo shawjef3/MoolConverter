@@ -9,7 +9,8 @@ case class ProjectMapping(prj_path: String, bld_id: Int, bld_path: String,
                           java_version: Option[String], group_id: Option[String], artifact_id: Option[String],
                           version: Option[String], repo_url: Option[String], classifier: Option[String]) {
   def isMavenDep() =
-    bld_path.startsWith("java.mvn.") && group_id.isDefined && artifact_id.isDefined && version.isDefined
+    (bld_path.startsWith("java.mvn.") || bld_path.startsWith("java.com.rocketfuel.ei.datamon")) &&
+      group_id.isDefined && artifact_id.isDefined && version.isDefined
 }
 
 object ProjectMapping extends Deployable with Logger {
