@@ -129,6 +129,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION mool_dedup.bld_path(bld_id int) RETURNS text AS $$
+DECLARE
+  bld_path text;
+BEGIN
+  SELECT path INTO STRICT bld_path
+  FROM mool_dedup.blds
+  WHERE id = bld_id;
+
+  RETURN bld_path;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION mool_dedup.bld_to_bld_id(source_id_arg int, target_id_arg int) RETURNS int AS $$
 DECLARE
   bld_to_bld_id int;
@@ -544,3 +556,97 @@ BEGIN
   RETURN mool_dedup.move_into(parent0_id, parent1_id);
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE EXTENSION IF NOT EXISTS ltree;
+
+/**
+Move up the dependency tree, finding BLDs that depend on a given BLD.
+This function answers the question, "What depends on ___?"
+ */
+CREATE OR REPLACE FUNCTION mool_dedup.dependents_of(bld_id int) RETURNS TABLE (bld_id int) AS $$
+WITH RECURSIVE transitive_dependents AS (
+  SELECT
+    source_id AS dependent_id
+  FROM mool_dedup.bld_to_bld
+  WHERE target_id = bld_id
+  UNION
+  SELECT
+    bld_to_bld.source_id
+  FROM transitive_dependents
+  INNER JOIN mool_dedup.bld_to_bld
+    ON bld_to_bld.target_id = transitive_dependents.dependent_id
+)
+SELECT dependent_id
+FROM transitive_dependents
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.dependents_of(bld_path text[]) RETURNS TABLE (bld_id int) AS $$
+DECLARE
+  bld_id int = mool_dedup.bld_id(bld_path);
+BEGIN
+  RETURN QUERY
+  SELECT d.bld_id
+  FROM mool_dedup.dependents_of(bld_id) d;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.dependencies_of(bld_id int) RETURNS TABLE (bld_id int) AS $$
+WITH RECURSIVE transitive_dependencies AS (
+  SELECT
+    target_id AS dependency_id
+  FROM mool_dedup.bld_to_bld
+  WHERE source_id = bld_id
+  UNION
+  SELECT
+    bld_to_bld.target_id
+  FROM transitive_dependencies
+    INNER JOIN mool_dedup.bld_to_bld
+      ON bld_to_bld.source_id = transitive_dependencies.dependency_id
+)
+SELECT dependency_id
+FROM transitive_dependencies
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.dependencies_of(bld_path text[]) RETURNS TABLE (bld_id int) AS $$
+DECLARE
+  bld_id int = mool_dedup.bld_id(bld_path);
+BEGIN
+  RETURN QUERY
+  SELECT d.bld_id
+  FROM mool_dedup.dependencies_of(bld_id) d;
+END;
+$$ LANGUAGE plpgsql;
+
+/*
+Not used yet, but could come in handy later. Very slow.
+
+To populate:
+REFRESH MATERIALIZED VIEW mool_dedup.transitive_dependencies;
+ */
+CREATE MATERIALIZED VIEW mool_dedup.transitive_dependencies (bld_id, dependencies) AS
+WITH RECURSIVE transitive_dependencies AS (
+  SELECT
+    source_id,
+    text2ltree(target_id :: text) AS dependencies,
+    target_id AS last
+  FROM mool_dedup.bld_to_bld
+  UNION ALL
+  SELECT
+    transitive_dependencies.source_id,
+    dependencies || (target_id :: text) AS dependencies,
+    target_id AS last
+  FROM transitive_dependencies
+  INNER JOIN mool_dedup.bld_to_bld
+    ON bld_to_bld.source_id = last
+)
+SELECT
+  transitive_dependencies.source_id AS bld_id,
+  dependencies
+FROM transitive_dependencies
+WHERE NOT EXISTS(
+  SELECT
+  FROM mool_dedup.bld_to_bld transitivity
+  WHERE transitivity.source_id = last
+)
+WITH NO DATA
+;

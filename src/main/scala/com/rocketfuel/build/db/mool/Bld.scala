@@ -2,7 +2,7 @@ package com.rocketfuel.build.db.mool
 
 import java.nio.file.Path
 import com.rocketfuel.build.db._
-import com.rocketfuel.build.db.mvn.{Dependency, Identifier, Parents}
+import com.rocketfuel.build.db.mvn.{Dependency, Exclusion, Identifier, Parents}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
 import scala.xml.Elem
@@ -21,7 +21,13 @@ case class Bld(
   filePackage: Option[String] = None
 ) {
 
-  def pom(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path): Elem = {
+  def pom(
+    identifier: Identifier,
+    dependencies: Vector[Dependency],
+    projectRoot: Path,
+    moduleRoot: Path,
+    exclusions: Map[Int, Set[Exclusion]]
+  ): Elem = {
     val parentArtifact = Parents.parent(this)
     val parentNode = parentArtifact.parentXml(projectRoot, moduleRoot)
 
@@ -45,7 +51,7 @@ case class Bld(
       <dependencies>
         {
         for (dependency <- dependencies) yield
-          dependency.mavenDefinition
+          dependency.mavenDefinition(exclusions)
         }
       </dependencies>
 

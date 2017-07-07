@@ -6,25 +6,7 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 object Convert {
 
-  //This is a hack for athena testdata
-  val usesTestData = Set(
-    "java/com/rocketfuel/modeling/athena/pipelines/featureDist/FeatureDistTest",
-    "java/com/rocketfuel/modeling/athena/core/utils/UtilsTest",
-    "java/com/rocketfuel/modeling/athena/core/utils/UtilsSparkTest",
-    "java/com/rocketfuel/modeling/athena/core/utils/Utils",
-    "java/com/rocketfuel/modeling/athena/core/modules/ml/MLModulesTest",
-    "java/com/rocketfuel/modeling/athena/core/modules/LogisticRegressionOWLQNModuleTest",
-    "java/com/rocketfuel/modeling/athena/core/modules/EncodingModulesTest",
-    "java/com/rocketfuel/modeling/athena/core/modules/EncodingModulesTest",
-    "java/com/rocketfuel/modeling/athena/core/modules/BacktestAUCCalculationModuleTest",
-    "java/com/rocketfuel/modeling/athena/core/ml/models/ParamTest",
-    "java/com/rocketfuel/modeling/athena/core/common/TestSetup",
-    "java/com/rocketfuel/modeling/athena/core/common/JsonConverterTest",
-    "java/com/rocketfuel/modeling/athena/core/common/FeatureGroupingFunctionsTest",
-    "java/com/rocketfuel/modeling/athena/core/common/ConfLiftTest",
-    "java/com/rocketfuel/modeling/athena/core/common/CommonTest",
-    "java/com/rocketfuel/modeling/athena/core/common/BacktestUtilsTest"
-  ).map(_.split("/").toSeq)
+  val athenaPrefix = "java/com/rocketfuel/modeling/athena".split('/')
 
   def addBuildRoot(pom: String): String = {
     pom.replace(
@@ -35,6 +17,7 @@ object Convert {
         |      <plugin>
         |        <groupId>me.jeffshaw.scalatest</groupId>
         |        <artifactId>scalatest-maven-plugin</artifactId>
+        |        <version>2.0.0-M1</version>
         |        <configuration>
         |          <environmentVariables>
         |            <BUILD_ROOT>${project.parent.parent.parent.parent.basedir}</BUILD_ROOT>
@@ -76,17 +59,20 @@ object Convert {
 
     val localBlds = mool.Bld.localBlds.vector()
 
+    val exclusions = mvn.Exclusion.byBldId()
+
     for (bld <- localBlds) {
       val identifier = identifiers(bld.id)
       val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
 
       val path = modulePaths(bld.id)
       val modulePath = destinationRoot.resolve(path)
-      val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath)
+      val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath, exclusions)
       val pomPath = modulePath.resolve("pom.xml")
 
+      //This is a hack for athena testdata
       val fixedPom =
-        if (usesTestData.contains(bld.path)) {
+        if (bld.path.startsWith(athenaPrefix)) {
           addBuildRoot(pom.toString)
         } else pom.toString
 

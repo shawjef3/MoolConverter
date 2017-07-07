@@ -17,7 +17,7 @@ object Clone {
       Process(s"rm -rf $absoluteDestination").!
     }
 
-    Process("git", Seq("clone", "--depth", "1", url, absoluteDestination)).!
+    Process("git", Seq("clone", url, absoluteDestination)).!
 
     Process(Seq("git", "fetch", url, change), destinationFile).!
 
@@ -25,14 +25,11 @@ object Clone {
   }
 
   def gridModeling(destinationRoot: Path): Unit = {
-    /*
-    If this fails, go to https://gerrit.rfiserve.net/#/c/115415/, rebase, and update the refs below.
-     */
-    clone("ssh://git.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/6", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/grid/modeling", "refs/changes/70/112770/8", destinationRoot)
   }
 
   def vostok(destinationRoot: Path): Unit = {
-    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/4", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/5", destinationRoot)
   }
 
 }
