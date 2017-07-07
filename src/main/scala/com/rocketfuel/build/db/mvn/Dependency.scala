@@ -15,7 +15,7 @@ case class Dependency(
 ) {
 
   def mavenDefinition(exclusions: Map[Int, Set[Exclusion]]): Elem = {
-    val bldExclusions: Set[Exclusion] =
+    val dependencyExclusions: Set[Exclusion] =
       targetId.map(exclusions.getOrElse(_, Set.empty)).getOrElse(Set.empty)
 
     <dependency>
@@ -28,11 +28,11 @@ case class Dependency(
           <type>{`type`.get}</type>
       }
       {
-        if (bldExclusions.nonEmpty) {
+        if (dependencyExclusions.nonEmpty) {
           <exclusions>
           {
           for {
-            exclusion <- bldExclusions
+            exclusion <- dependencyExclusions
           } yield exclusion.mavenDefinition
           }
           </exclusions>

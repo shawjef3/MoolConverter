@@ -59,7 +59,7 @@ object Convert {
 
     val localBlds = mool.Bld.localBlds.vector()
 
-    val exclusions = mvn.Exclusion.byBldId()
+    val exclusions = mvn.Exclusion.byBldIdAndDependencyId()
 
     for (bld <- localBlds) {
       val identifier = identifiers(bld.id)

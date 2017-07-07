@@ -34,8 +34,10 @@ object Exclusion extends Deployable {
         |""".stripMargin
     )
 
-  def byBldId()(implicit connection: Connection): Map[Int, Set[Exclusion]] = {
-    list.vector().toSet.groupBy(_.bldId)
+  def byBldIdAndDependencyId()(implicit connection: Connection): Map[Int, Map[Int, Set[Exclusion]]] = {
+    for {
+      (bldId, bldExclusions) <- list.vector().toSet.groupBy((x: Exclusion) => x.bldId)
+    } yield bldId -> bldExclusions.groupBy(_.dependencyId)
   }
 
   def run()(implicit connection: Connection): Unit = {

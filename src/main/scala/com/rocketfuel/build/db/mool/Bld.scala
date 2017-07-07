@@ -26,7 +26,7 @@ case class Bld(
     dependencies: Vector[Dependency],
     projectRoot: Path,
     moduleRoot: Path,
-    exclusions: Map[Int, Set[Exclusion]]
+    exclusions: Map[Int, Map[Int, Set[Exclusion]]]
   ): Elem = {
     val parentArtifact = Parents.parent(this)
     val parentNode = parentArtifact.parentXml(projectRoot, moduleRoot)
@@ -51,7 +51,7 @@ case class Bld(
       <dependencies>
         {
         for (dependency <- dependencies) yield
-          dependency.mavenDefinition(exclusions)
+          dependency.mavenDefinition(exclusions.getOrElse(id, Map.empty))
         }
       </dependencies>
 
