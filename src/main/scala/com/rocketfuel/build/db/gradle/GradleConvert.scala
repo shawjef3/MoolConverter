@@ -34,6 +34,12 @@ object GradleConvert extends Logger {
       |  thriftExecutable "${System.env.HOME}/.mooltool/packages/thrift-0.9.1/bin/thrift"
       |}
       |""".stripMargin
+  private val testNGConfigSnippet =
+    """
+      |test {
+      |  useTestNG()
+      |}
+      |""".stripMargin
   private val scala210Libs = List("  compile 'org.scala-lang:scala-library:2.10.4'",
     "  compile 'org.scala-lang:scala-actors:2.10.4'"
   )
@@ -138,6 +144,8 @@ object GradleConvert extends Logger {
                       (build.copy(compileDeps = build.compileDeps + protoLib,
                         plugins = build.plugins + "com.google.protobuf",
                         snippets = build.snippets + protoConfigSnippet), false)
+                    case r if r == "java_test" =>
+                      (build.copy(snippets = build.snippets + testNGConfigSnippet), false)
                     case r if r == "java_thrift_lib" =>
                       (build.copy(plugins = build.plugins + "org.jruyi.thrift",
                         snippets = build.snippets + thriftConfigSnippet), false)
