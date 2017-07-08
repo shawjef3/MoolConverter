@@ -14,7 +14,7 @@ TODO: check if there are copied sources not mapped into build
 case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
                             compileDeps: Set[String] = Set.empty,
                             compileTestDeps: Set[String] = Set.empty,
-                            plugins: Set[String] = Set.empty,
+                            plugins: Set[String] = Set("java"),
                             snippets: Set[String] = Set.empty,
                             useTestNg: Boolean = false)
 
@@ -34,6 +34,11 @@ object GradleConvert extends Logger {
       |  thriftExecutable "${System.env.HOME}/.mooltool/packages/thrift-0.9.1/bin/thrift"
       |}
       |""".stripMargin
+  private val scala210Libs = List("  compile 'org.scala-lang:scala-library:2.10.4'",
+    "  compile 'org.scala-lang:scala-actors:2.10.4'"
+  )
+  private val scala211Libs = List("  compile 'org.scala-lang:scala-library:2.11.8'")
+
   private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
 
   private def loadResource(path: String): String = {
@@ -77,7 +82,11 @@ object GradleConvert extends Logger {
     val copies = GradleCopy.all.vector().map { c =>
       val prjPath = c.destination.split("/").toList
       val fixedDestination = (prjNameMapping(prjPath.head) :: prjPath.tail).mkString("/")
-      c.copy(destination = fixedDestination)
+      val fixedDestination2 = if (fixedDestination.endsWith("AdScoringInfoPerseus.java"))
+                                 fixedDestination.replace("src/main/java/", "src/main/scala/")
+                              else
+                                 fixedDestination
+      c.copy(destination = fixedDestination2)
     }.toSet
     val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
     fileCopier.copyAll()
@@ -131,7 +140,9 @@ object GradleConvert extends Logger {
                       (build.copy(plugins = build.plugins + "org.jruyi.thrift",
                         snippets = build.snippets + thriftConfigSnippet), false)
                     case r if r == "scala_lib" =>
-                      (build.copy(plugins = build.plugins + "scala"), false)
+                      (build.copy(
+                        compileDeps = build.compileDeps ++ (if (lib.scala_version.contains("2.10")) scala210Libs else scala211Libs),
+                        plugins = build.plugins + "scala"), false)
                     case _ =>
                       (build, false)
                   }
@@ -160,6 +171,7 @@ object GradleConvert extends Logger {
               |""".stripMargin +
             buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
             "\n}\n"
+
 
           Files.createDirectories(prjBuildGradle.getParent)
           Files.write(prjBuildGradle,
