@@ -13,8 +13,8 @@ CREATE OR REPLACE VIEW gradle.dependencies AS (
     b.classifier,
     bb.is_compile
   FROM gradle.project_mapping pm
-    JOIN mool_dedup.bld_to_bld bb ON pm.bld_id = bb.source_id
-    JOIN mool_dedup.blds b ON bb.target_id = b.id
+    JOIN mool.bld_to_bld bb ON pm.bld_id = bb.source_id
+    JOIN mool.blds b ON bb.target_id = b.id
   UNION DISTINCT
   SELECT DISTINCT
     pm.prj_path,
@@ -30,5 +30,5 @@ CREATE OR REPLACE VIEW gradle.dependencies AS (
     b.classifier,
     false
   FROM gradle.project_mapping pm
-    JOIN mool_dedup.blds b ON pm.bld_id = b.id
+    JOIN mool.blds b ON pm.bld_id = b.id
 )

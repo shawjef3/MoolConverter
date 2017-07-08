@@ -11,5 +11,5 @@ CREATE OR REPLACE VIEW gradle.libraries AS (
     b.repo_url,
     b.classifier
   FROM gradle.build_tree bt
-    JOIN mool_dedup.blds b ON bt.bld_id = b.id
+    JOIN mool.blds b ON bt.bld_id = b.id
 )

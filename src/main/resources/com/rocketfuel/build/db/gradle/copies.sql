@@ -22,13 +22,13 @@ WITH dir_parts AS (
            WHEN sources.path LIKE '%.cc' THEN 'c++'
            ELSE 'resources'
       END AS lang_path
-    FROM mool_dedup.blds
+    FROM mool.blds
       INNER JOIN gradle.project_mapping pm
         ON blds.id = pm.bld_id
-      INNER JOIN mool_dedup.bld_to_source
-        ON blds.id = bld_to_source.bld_id
+      INNER JOIN mool.bld_to_sources
+        ON blds.id = bld_to_sources.bld_id
       INNER JOIN mool.sources
-        ON bld_to_source.source_id = sources.id
+        ON bld_to_sources.source_id = sources.id
 )
 SELECT
   source,
