@@ -3,7 +3,7 @@
   
     Generally it works but there are probably many strange cases that deserve special treatment.
     
-  * properly use compileOnly (akin to Maven's provided scope) / compile / testCompile
+  * properly use `compileOnly` (akin to Maven's provided scope) / compile / testCompile
   * ~~check test execution~~
     
     Test are executed. Many of them are failing due broken resource loading (lookup).
@@ -16,7 +16,7 @@
   * deploy to production like per RELCFG
 
 * Scala
-  * build scala code
+  * build scala code - 80% due some problems with modeling
   * enable 2.10/2.11 switching 
     This is tricky. 
     Some simple cases look OK but modeling is full of strange patterns. 
@@ -31,7 +31,7 @@
     OK for the moment. It can refer to `$HOME/.mooltool` temporarily.
      
     Check if artifact in Nexus is patched or not.
-  * thrift
+  * ~~thrift~~
   
     Pointing to binary in `$HOME/.mooltool` seems enough.
     
