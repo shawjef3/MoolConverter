@@ -47,10 +47,10 @@ WHERE bld_to_sources.bld_id = blds.id
 
 --Use the cloned grid.modeling. Requires Convert.gridModeling(Path).
 --This fixes  the version of AdScoringInfo to be used during compiling.
-UPDATE mool.blds
-SET version = 'M1'
-WHERE group_id = 'com.rocketfuel.grid.modeling'
-  AND artifact_id = 'grid.modeling';
+-- UPDATE mool.blds
+-- SET version = 'M1'
+-- WHERE group_id = 'com.rocketfuel.grid.modeling'
+--   AND artifact_id = 'grid.modeling';
 
 --This dependency causes a duplicate of ModelingConstants to be on the classpath.
 -- DELETE FROM mool.bld_to_bld
