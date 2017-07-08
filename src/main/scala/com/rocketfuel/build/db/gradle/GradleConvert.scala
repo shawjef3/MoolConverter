@@ -38,6 +38,8 @@ object GradleConvert extends Logger {
     "  compile 'org.scala-lang:scala-actors:2.10.4'"
   )
   private val scala211Libs = List("  compile 'org.scala-lang:scala-library:2.11.8'")
+  private val scala210Tasks = "rootProject.tasks.build210.dependsOn tasks.build\n"
+  private val scala211Tasks = "rootProject.tasks.build211.dependsOn tasks.build\n"
 
   private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
 
@@ -142,7 +144,8 @@ object GradleConvert extends Logger {
                     case r if r == "scala_lib" =>
                       (build.copy(
                         compileDeps = build.compileDeps ++ (if (lib.scala_version.contains("2.10")) scala210Libs else scala211Libs),
-                        plugins = build.plugins + "scala"), false)
+                        plugins = build.plugins ++ Set("scala", "com.adtran.scala-multiversion-plugin"),
+                        snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks)), false)
                     case _ =>
                       (build, false)
                   }
@@ -163,9 +166,11 @@ object GradleConvert extends Logger {
           }._1
 
           val buildGradleText =
-            buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") +
+            buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
             buildGradleParts.snippets.mkString("\n") +
             """
+              |
+              |configurations.compile.transitive = false
               |
               |dependencies {
               |""".stripMargin +
