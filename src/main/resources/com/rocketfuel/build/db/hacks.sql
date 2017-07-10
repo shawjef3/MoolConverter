@@ -31,6 +31,18 @@ WHERE
   AND json4s.group_id = 'org.json4s'
   AND json4s.artifact_id LIKE '%_2.11';
 
+/*
+Use a newer version of json4s, or else we sometimes get
+
+java.lang.NoSuchMethodError: com.fasterxml.jackson.databind.introspect.POJOPropertyBuilder.addField(Lcom/fasterxml/jackson/databind/introspect/AnnotatedField;Lcom/fasterxml/jackson/databind/PropertyName;ZZZ)V
+
+EncodingModulesTest, DefaultPrepareEncodedTest
+ */
+
+UPDATE mool.blds
+SET version = '3.5.2'
+WHERE group_id = 'org.json4s';
+
 --The BLD's version brings in a 2 year old version of a class, causing compiling to fail
 --for com.rocketfuel.grid:reporting.revenue_capping.driver_lib and others.
 -- UPDATE mool.blds

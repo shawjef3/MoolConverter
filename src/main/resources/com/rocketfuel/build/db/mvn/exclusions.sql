@@ -19,8 +19,8 @@ SELECT
   bld_id AS bld_id,
   --all dependencies that is or depends on athena.core.Common, from bld_to_blds and dependents_of.
   bld_to_bld.target_id AS dependency_id,
-  x.group_id AS excluded_group_id,
-  x.artifact_id AS excluded_artifact_id
+  x.excluded_group_id,
+  x.excluded_artifact_id
 FROM require_both
 INNER JOIN mool_dedup.bld_to_bld
   ON bld_id = bld_to_bld.source_id
@@ -35,5 +35,5 @@ CROSS JOIN (
   VALUES
     ('org.mortbay.jetty', 'servlet-api-2.5'),
     ('javax.servlet', 'servlet-api')
-  ) AS x (group_id, artifact_id)
+  ) AS x (excluded_group_id, excluded_artifact_id)
 ;

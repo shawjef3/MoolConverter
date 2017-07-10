@@ -1,9 +1,19 @@
 package com.rocketfuel.build.db
 
+import java.net.{InetAddress, UnknownHostException}
 import java.nio.file.{Files, Path}
 import scala.sys.process.Process
 
 object Clone {
+
+  //Fail immediately if you're not on the Rocketfuel VPN.
+  try {
+    InetAddress.getByName("git.rfiserve.net")
+  } catch {
+    case e: UnknownHostException =>
+      println("Connect to the Rocketfuel VPN.")
+      throw e
+  }
 
   private def clone(url: String, change: String, destination: Path): Unit = {
     val absoluteDestination = destination.toAbsolutePath.toString
@@ -29,7 +39,7 @@ object Clone {
   }
 
   def vostok(destinationRoot: Path): Unit = {
-    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/6", destinationRoot)
+    clone("ssh://git.rfiserve.net:29418/data/vostok", "refs/changes/15/115415/7", destinationRoot)
   }
 
 }

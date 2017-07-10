@@ -589,3 +589,11 @@ SELECT mool_dedup.add_dependency(
   false,
   false
 );
+
+--Avoid ClassNotFoundException during testing.
+SELECT mool_dedup.add_dependency(
+  array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'ml', 'models', 'ModelsTest'],
+  array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'ml', 'models', 'AthenaLogisticRegressionModel'],
+  true,
+  false
+);

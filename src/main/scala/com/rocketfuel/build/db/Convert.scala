@@ -1,7 +1,7 @@
 package com.rocketfuel.build.db
 
 import java.nio.file._
-import com.rocketfuel.build.db.mvn.{Copy, FileCopier, ModulePath, Parents}
+import com.rocketfuel.build.db.mvn.{Copy, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
 object Convert {
@@ -30,15 +30,26 @@ object Convert {
     )
   }
 
+  def copyFiles(source: Path, destination: Path): Unit = {
+    Files.createDirectories(destination)
+    Files.walk(source).filter(Files.isRegularFile(_)).forEach(
+      path => {
+        val relativePath = source.relativize(path)
+        val pathDestination = destination.resolve(relativePath)
+        Files.createDirectories(pathDestination.getParent)
+        Files.copy(path, pathDestination, StandardCopyOption.REPLACE_EXISTING)
+      }
+    )
+  }
+
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val copies = Copy.all.vector().toSet
-    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
-    fileCopier.copyAll()
+    Copy.copy(copies, moolRoot, destinationRoot)
 
     //copy testdata
     val testData = moolRoot.resolve("java/com/rocketfuel/modeling/athena/testdata")
     val testDataDestination = destinationRoot.resolve("java/com/rocketfuel/modeling/athena/testdata")
-    FileCopier.copyFiles(testData, testDataDestination)
+    copyFiles(testData, testDataDestination)
   }
 
   def poms(destinationRoot: Path)(implicit connection: Connection): Unit = {
