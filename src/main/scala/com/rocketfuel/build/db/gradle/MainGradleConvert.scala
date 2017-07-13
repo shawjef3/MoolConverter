@@ -2,6 +2,7 @@ package com.rocketfuel.build.db.gradle
 
 import java.nio.file._
 
+import com.rocketfuel.build.db.Convert
 import com.rocketfuel.sdbc.PostgreSql._
 import com.zaxxer.hikari.HikariConfig
 
@@ -19,13 +20,14 @@ object MainGradleConvert extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-    GradleConvert.files(moolRoot, destinationRoot)
-
-    GradleConvert.rootBuildFiles(moolRoot)
-
-    GradleConvert.builds(moolRoot, destinationRoot)
+//    GradleConvert.files(moolRoot, destinationRoot)
+//    GradleConvert.rootBuildFiles(moolRoot)
+//    GradleConvert.builds(moolRoot, destinationRoot)
+    Convert.files(moolRoot, destinationRoot)
+//    SimpleGradleConvert.rootBuildFiles(moolRoot)
+    SimpleGradleConvert.builds(moolRoot, destinationRoot)
   }
 
-  // Convert.gridModeling(destinationRoot)
+  Convert.gridModeling(destinationRoot)
 
 }

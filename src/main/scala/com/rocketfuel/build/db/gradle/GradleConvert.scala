@@ -49,7 +49,7 @@ object GradleConvert extends Logger {
 
   private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
 
-  private def loadResource(path: String): String = {
+  def loadResource(path: String): String = {
     val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
     try source.mkString
     finally source.close()

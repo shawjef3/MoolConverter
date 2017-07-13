@@ -1,10 +1,12 @@
 package com.rocketfuel.build.db.mool
 
-import java.nio.file.Path
+import java.nio.file.{Files, Path, StandardOpenOption}
+
 import com.rocketfuel.build.db._
 import com.rocketfuel.build.db.mvn.{Dependency, Identifier, Parents}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
+
 import scala.xml.Elem
 
 case class Bld(
@@ -56,6 +58,19 @@ case class Bld(
     </project>
   }
 
+  def gradle(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path) = {
+    val buildGradleText =
+//      buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
+        "apply plugin: 'java'\n" +
+        // buildGradleParts.snippets.mkString("\n") +
+        """
+          |
+          |dependencies {
+          |""".stripMargin +
+        // buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
+        "\n}\n"
+    buildGradleText
+  }
 }
 
 object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bld] with SelectByPath[Bld] {

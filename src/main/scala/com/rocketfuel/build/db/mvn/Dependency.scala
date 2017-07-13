@@ -1,7 +1,9 @@
 package com.rocketfuel.build.db.mvn
 
 import com.rocketfuel.build.db.Deployable
+import com.rocketfuel.build.db.gradle.Library
 import com.rocketfuel.sdbc.PostgreSql._
+
 import scala.xml._
 
 case class Dependency(
@@ -25,6 +27,14 @@ case class Dependency(
       }
     </dependency>
 
+  lazy val gradleDefinition: String = {
+    val configuration = scope match {
+      case "provided" => "compileOnly"
+      case "test" => "testCompile"
+      case _ => "compile"
+    }
+    s"  ${configuration} '${groupId}:${artifactId}:${version}',\n"
+  }
 }
 
 object Dependency extends Deployable {
