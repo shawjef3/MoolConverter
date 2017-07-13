@@ -5,7 +5,7 @@ SELECT
       CASE WHEN path[1] = 'grid' THEN array_prepend('grid2', path[2:array_length(path, 1)])
            WHEN path[1:3] = array['java', 'com', 'rocketfuel'] THEN path[4:array_length(path, 1)]
            WHEN path[1:3] = array['clojure', 'com', 'rocketfuel'] THEN array_prepend('clojure', path[4:array_length(path, 1)])
-           WHEN path[1] = 'java' THEN array_prepend('3rd party', path[1:array_length(path, 1)])
+           WHEN path[1] = 'java' THEN array_prepend('3rd_party', path[1:array_length(path, 1)])
            ELSE path
       END,
       '/',

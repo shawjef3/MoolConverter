@@ -42,7 +42,7 @@ object SimpleGradleConvert {
       val path = modulePaths(bld.id)
       includedBuilds = (path, bld.path) :: includedBuilds
       val modulePath = destinationRoot.resolve(path)
-      val gradle = bld.gradle(identifier, bldDependencies, destinationRoot, modulePath)
+      val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, destinationRoot, modulePath)
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)
@@ -51,8 +51,9 @@ object SimpleGradleConvert {
 
     val settingsGradle = moolRoot.resolve("settings.gradle")
     val settings = includedBuilds.sortBy {_._1}.foldLeft("") { (buffer, prjNames) =>
+      val prjName = prjNames._1.replaceAll("/", "-")
       val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
-      buffer + s"include ':${prjNames._1}'$comment\n"
+      buffer + s"include ':${prjName}'$comment\n"
     }
 
     Files.write(settingsGradle,

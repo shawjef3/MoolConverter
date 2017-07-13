@@ -57,20 +57,6 @@ case class Bld(
 
     </project>
   }
-
-  def gradle(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path) = {
-    val buildGradleText =
-//      buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
-        "apply plugin: 'java'\n" +
-        // buildGradleParts.snippets.mkString("\n") +
-        """
-          |
-          |dependencies {
-          |""".stripMargin +
-        // buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
-        "\n}\n"
-    buildGradleText
-  }
 }
 
 object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bld] with SelectByPath[Bld] {

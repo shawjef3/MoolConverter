@@ -3,7 +3,9 @@ package com.rocketfuel.build.db.gradle
 import java.nio.file._
 
 import com.rocketfuel.build.Logger
-import com.rocketfuel.build.db.mvn.{Copy, FileCopier, ModulePath, Parents}
+import com.rocketfuel.build.db.mool.Bld
+import com.rocketfuel.build.db.mvn.{Dependency => MvnDependency}
+import com.rocketfuel.build.db.mvn._
 import com.rocketfuel.sdbc.PostgreSql._
 
 /*
@@ -60,8 +62,9 @@ object GradleConvert extends Logger {
 
     val settingsGradle = moolRoot.resolve("settings.gradle")
     val settings = prjNameMapping.toList.sorted.foldLeft("") { (buffer, prjNames) =>
+      val prjName = prjNames._1.replaceAll("/", "-")
       val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
-      buffer + s"include ':${prjNames._1}'$comment\n"
+      buffer + s"include ':${prjName}'$comment\n"
     }
 
     Files.write(settingsGradle,
@@ -98,6 +101,39 @@ object GradleConvert extends Logger {
     }.toSet
     val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
     fileCopier.copyAll()
+  }
+
+
+  def gradle(identifier: Identifier, prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path, moduleRoot: Path) = {
+    val buildGradleParts = prjBld.ruleType match {
+      case "java_proto_lib" =>
+        BuildGradleParts(compileDeps = Set(protoLib),
+          plugins = Set("java", "com.google.protobuf"),
+          snippets = Set(protoConfigSnippet))
+      case "java_test" =>
+        BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
+          snippets = Set(testNGConfigSnippet))
+      case "java_thrift_lib" =>
+        BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
+          snippets = Set(thriftConfigSnippet))
+//        case r if r == "scala_lib" =>
+//          (build.copy(
+//            compileDeps = build.compileDeps ++ (if (lib.scala_version.contains("2.10")) scala210Libs else scala211Libs),
+//            plugins = build.plugins ++ Set("scala", "com.adtran.scala-multiversion-plugin"),
+//            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks)), false)
+      case _ =>
+        BuildGradleParts()
+      }
+    val buildGradleText =
+      buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
+      buildGradleParts.snippets.mkString("\n") +
+        """
+          |
+          |dependencies {
+          |""".stripMargin +
+      buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
+        "\n}\n"
+    buildGradleText
   }
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
