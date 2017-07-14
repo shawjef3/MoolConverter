@@ -50,6 +50,7 @@ object GradleConvert extends Logger {
   private val scala211Tasks = "rootProject.tasks.build211.dependsOn tasks.build\n"
 
   private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
+  private val thriftLib = "  compile 'org.apache.thrift:libthrift:0.9.1'"
 
   def loadResource(path: String): String = {
     val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
@@ -104,26 +105,48 @@ object GradleConvert extends Logger {
   }
 
 
-  def gradle(identifier: Identifier, prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path, moduleRoot: Path) = {
-    val buildGradleParts = prjBld.ruleType match {
-      case "java_proto_lib" =>
-        BuildGradleParts(compileDeps = Set(protoLib),
-          plugins = Set("java", "com.google.protobuf"),
-          snippets = Set(protoConfigSnippet))
-      case "java_test" =>
-        BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
-          snippets = Set(testNGConfigSnippet))
-      case "java_thrift_lib" =>
-        BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
-          snippets = Set(thriftConfigSnippet))
-//        case r if r == "scala_lib" =>
-//          (build.copy(
-//            compileDeps = build.compileDeps ++ (if (lib.scala_version.contains("2.10")) scala210Libs else scala211Libs),
-//            plugins = build.plugins ++ Set("scala", "com.adtran.scala-multiversion-plugin"),
-//            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks)), false)
-      case _ =>
-        BuildGradleParts()
+  def gradle(identifier: Identifier, prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
+             moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
+    def setupBuildGradle = {
+      prjBld.ruleType match {
+        case "java_proto_lib" =>
+          BuildGradleParts(compileDeps = Set(protoLib),
+            plugins = Set("java", "com.google.protobuf"),
+            snippets = Set(protoConfigSnippet))
+        case "java_test" =>
+          BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
+            snippets = Set(testNGConfigSnippet))
+        case "java_thrift_lib" =>
+          BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
+            snippets = Set(thriftConfigSnippet),
+            compileDeps = Set(thriftLib))
+        //        case r if r == "scala_lib" =>
+        //          (build.copy(
+        //            compileDeps = build.compileDeps ++ (if (lib.scala_version.contains("2.10")) scala210Libs else scala211Libs),
+        //            plugins = build.plugins ++ Set("scala", "com.adtran.scala-multiversion-plugin"),
+        //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks)), false)
+        case _ =>
+          BuildGradleParts()
       }
+    }
+
+    val buildGradleParts = dependencies.foldLeft(setupBuildGradle) { case (build, dep) =>
+        moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
+        case Some(depPath) =>
+          val configuration = dep.scope match {
+            case "provided" => "compileOnly"
+            case "test" => "testCompile"
+            case _ => "compile"
+          }
+          build.copy(compileDeps = build.compileDeps + s"  ${configuration} project(':${depPath}')")
+        case _ =>
+          if (identifier.artifactId.contains("hbase.testutils")) {
+            logger.info(s"  3rd party ${identifier} -> ${dep}")
+          }
+          build.copy(compileDeps = build.compileDeps + dep.gradleDependency)
+      }
+    }
+
     val buildGradleText =
       buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
       buildGradleParts.snippets.mkString("\n") +

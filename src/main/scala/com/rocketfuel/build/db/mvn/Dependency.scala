@@ -1,13 +1,13 @@
 package com.rocketfuel.build.db.mvn
 
 import com.rocketfuel.build.db.Deployable
-import com.rocketfuel.build.db.gradle.Library
 import com.rocketfuel.sdbc.PostgreSql._
 
 import scala.xml._
 
 case class Dependency(
   sourceId: Int,
+  targetId: Option[Int],
   groupId: String,
   artifactId: String,
   version: String,
@@ -28,18 +28,26 @@ case class Dependency(
     </dependency>
 
   lazy val gradleDefinition: String = {
+    s"${groupId}:${artifactId}:${version}"
+  }
+
+  lazy val gradleDependency: String = {
     val configuration = scope match {
       case "provided" => "compileOnly"
       case "test" => "testCompile"
       case _ => "compile"
     }
-    s"  ${configuration} '${groupId}:${artifactId}:${version}',\n"
+    val classifier = `type` match {
+      case Some("test-jar") => ":tests"
+      case _ => ""
+    }
+    s"  ${configuration} '${gradleDefinition}${classifier}'"
   }
 }
 
 object Dependency extends Deployable {
   val list =
-    Select[Dependency]("SELECT source_id sourceId, group_id groupId, artifact_id artifactId, version, scope, type FROM mvn.all_dependencies")
+    Select[Dependency]("SELECT source_id sourceId, target_id targetId, group_id groupId, artifact_id artifactId, version, scope, type FROM mvn.all_dependencies")
 
   val selectBySourceId =
     Select[Dependency](list.originalQueryText + " WHERE source_id = @sourceId")
