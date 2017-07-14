@@ -37,7 +37,6 @@ object Copy extends Deployable {
       copies.filter(_.source.endsWith(".proto"))
 
     def copy(source: Path, destination: Path): Unit = {
-      Files.createDirectories(destination.getParent)
       if (source.getFileName.toString.endsWith(".proto")) {
         copyProto(source, destination)
       } else {
@@ -67,19 +66,18 @@ object Copy extends Deployable {
 
     copies.foldLeft(Map.empty[String, Path]) {
       case (previousCopies, Copy(source, _, destination)) =>
-        val sourcePath = sourceRoot.resolve(source)
         val destinationPath = destinationRoot.resolve(destination)
+        Files.createDirectories(destinationPath.getParent)
 
         previousCopies.get(source) match {
           case None =>
+            val sourcePath = sourceRoot.resolve(source)
             copy(sourcePath, destinationPath)
             previousCopies + (source -> destinationPath)
 
           case Some(existingDestination) =>
             val target = destinationPath.getParent.relativize(existingDestination)
-
             Files.deleteIfExists(destinationPath)
-
             Files.createSymbolicLink(destinationPath, target)
             previousCopies
         }
