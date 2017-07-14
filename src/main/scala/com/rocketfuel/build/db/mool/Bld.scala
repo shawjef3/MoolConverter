@@ -60,6 +60,44 @@ case class Bld(
         <maven.compiler.target>{pomJavaVersion}</maven.compiler.target>
       </properties>
 
+      {
+      //fix for athena testdata
+      if (path.contains("athena")) {
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>me.jeffshaw.scalatest</groupId>
+              <artifactId>scalatest-maven-plugin</artifactId>
+              <version>2.0.0-M1</version>
+              <configuration>
+                <environmentVariables>
+                  <BUILD_ROOT>
+                  {
+                  //work around for needing a literal ${} inside of xml.
+                  xml.Text("${project.parent.parent.parent.parent.basedir}")
+                  }
+                  </BUILD_ROOT>
+                </environmentVariables>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+      }
+      }
+
+      {
+      //fix for resources being loaded using the file system instead of as resources.
+      if (path == Seq("java", "com", "rocketfuel", "grid", "lookup", "dim", "DimTablesTest")) {
+        Bld.testWithExtractedDependencies
+      }
+      }
+
+      {
+      if (path == Seq("java", "com", "rocketfuel", "grid", "common", "hbase", "keylistformat", "filefetcher", "KeyValueFileFetcherTest")) {
+        Bld.testWithExtractedDependencies
+      }
+      }
+
     </project>
   }
 
@@ -165,5 +203,47 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
 
   val selectByPathSql: Select[Bld] =
     Select[Bld](all.originalQueryText + " WHERE path = @path")
+
+  val testWithExtractedDependencies: xml.Elem = {
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <executions>
+            <execution>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>unpack-dependencies</goal>
+              </goals>
+              <configuration>
+                <includeGroupIds>com.rocketfuel.grid</includeGroupIds>
+                <excludes>
+                {
+                //work around for needing a literal /* instead of xml.
+                xml.Text("**/*.class")
+                }
+                </excludes>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <!-- run the tests with the unpacked dependencies in the classpath. -->
+            <!-- see https://maven.apache.org/plugins/maven-dependency-plugin/unpack-dependencies-mojo.html -->
+            <workingDirectory>
+              {
+              //work around for needing a literal ${} inside of xml.
+              xml.Text("${project.build.directory}/dependency")
+              }
+            </workingDirectory>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  }
 
 }

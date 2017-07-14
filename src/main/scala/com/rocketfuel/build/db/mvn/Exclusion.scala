@@ -40,22 +40,12 @@ object Exclusion extends Deployable {
     } yield bldId -> bldExclusions.groupBy(_.dependencyId)
   }
 
-  def run()(implicit connection: Connection): Unit = {
-    val source = io.Source.fromInputStream(getClass.getResourceAsStream("exclusions.sql")).mkString
-    Ignore.ignore(source)
-  }
+  val deploy = Ignore.readTypeResource[Exclusion]("exclusions/create.sql")
+
+  val run = Ignore.readTypeResource[Exclusion]("exclusions/run.sql")
 
   override def deploy()(implicit connection: Connection): Unit = {
-    Ignore.ignore(
-      """CREATE TABLE IF NOT EXISTS mvn.exclusions (
-        |  id serial PRIMARY KEY,
-        |  bld_id int NOT NULL,
-        |  dependency_id int NOT NULL,
-        |  excluded_group_id text NOT NULL,
-        |  excluded_artifact_id text NOT NULL
-        |);
-        |""".stripMargin
-    )
+    deploy.ignore()
   }
 
   override def undeploy()(implicit connection: Connection): Unit =

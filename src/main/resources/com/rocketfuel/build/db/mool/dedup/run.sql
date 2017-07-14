@@ -597,3 +597,17 @@ SELECT mool_dedup.add_dependency(
   true,
   false
 );
+
+--Avoid wrong version of AdScoringInfo.
+SELECT mool_dedup.remove_dependency(
+  ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'AdScoringInfo'],
+  ARRAY['java', 'mvn', 'com', 'rocketfuel', 'grid', 'modeling', 'GridModeling']
+);
+
+SELECT mool_dedup.add_dependency(
+  ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'AdScoringInfo'],
+  ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'ModelingConstants'],
+  false,
+  false
+);
+

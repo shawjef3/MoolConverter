@@ -8,28 +8,6 @@ object Convert {
 
   val athenaPrefix = "java/com/rocketfuel/modeling/athena".split('/')
 
-  def addBuildRoot(pom: String): String = {
-    pom.replace(
-      "</properties>",
-      """</properties>
-        |  <build>
-        |    <plugins>
-        |      <plugin>
-        |        <groupId>me.jeffshaw.scalatest</groupId>
-        |        <artifactId>scalatest-maven-plugin</artifactId>
-        |        <version>2.0.0-M1</version>
-        |        <configuration>
-        |          <environmentVariables>
-        |            <BUILD_ROOT>${project.parent.parent.parent.parent.basedir}</BUILD_ROOT>
-        |          </environmentVariables>
-        |        </configuration>
-        |      </plugin>
-        |    </plugins>
-        |  </build>
-        |""".stripMargin
-    )
-  }
-
   def copyFiles(source: Path, destination: Path): Unit = {
     Files.createDirectories(destination)
     Files.walk(source).filter(Files.isRegularFile(_)).forEach(
@@ -81,14 +59,8 @@ object Convert {
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath, exclusions)
       val pomPath = modulePath.resolve("pom.xml")
 
-      //This is a hack for athena testdata
-      val fixedPom =
-        if (bld.path.startsWith(athenaPrefix)) {
-          addBuildRoot(pom.toString)
-        } else pom.toString
-
       Files.createDirectories(modulePath)
-      Files.write(pomPath, fixedPom.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 
     Parents.writeRoot(destinationRoot)

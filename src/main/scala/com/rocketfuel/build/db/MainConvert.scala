@@ -23,6 +23,4 @@ object MainConvert extends App {
     Convert.poms(destinationRoot)
   }
 
-  Clone.gridModeling(destinationRoot.resolve("grid/modeling"))
-
 }

@@ -35,7 +35,7 @@ object MainDeploy extends App {
 
     DependencySupplements.supplement()
 
-    Exclusion.run()
+    Exclusion.run.ignore()
   }
 
 }

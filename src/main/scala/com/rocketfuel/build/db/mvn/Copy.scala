@@ -38,7 +38,7 @@ object Copy extends Deployable {
 
     def copy(source: Path, destination: Path): Unit = {
       Files.createDirectories(destination.getParent)
-      if (source.getFileName.endsWith(".proto")) {
+      if (source.getFileName.toString.endsWith(".proto")) {
         copyProto(source, destination)
       } else {
         Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
