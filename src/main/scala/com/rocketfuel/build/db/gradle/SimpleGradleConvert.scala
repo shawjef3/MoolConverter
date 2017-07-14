@@ -2,12 +2,13 @@ package com.rocketfuel.build.db.gradle
 
 import java.nio.file._
 
+import com.rocketfuel.build.Logger
 import com.rocketfuel.build.db.gradle.GradleConvert.loadResource
 import com.rocketfuel.build.db.mvn._
 import com.rocketfuel.build.db.mool.Bld
 import com.rocketfuel.sdbc.PostgreSql._
 
-object SimpleGradleConvert {
+object SimpleGradleConvert extends Logger {
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val copies = Copy.all.vector().toSet
@@ -19,7 +20,7 @@ object SimpleGradleConvert {
 
     val modulePaths = {
       for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
-        id -> path
+        id -> path.replaceAll("/", "-")
     }.toMap
 
     val identifiers = {
@@ -34,15 +35,23 @@ object SimpleGradleConvert {
     val localBlds = Bld.localBlds.vector()
 
     var includedBuilds = List[(String, Seq[String])]()
+    val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
+      val identifier = identifiers(bld.id)
+      val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
+      if (output.contains("Duplex")) {
+        logger.info(s"${output} produced by ${bld}")
+      }
+      moduleOuts + (output -> bld.id)
+    }
     for (bld <- localBlds) {
       val identifier = identifiers(bld.id)
-      println("creating build file for " + identifier)
       val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
 
       val path = modulePaths(bld.id)
       includedBuilds = (path, bld.path) :: includedBuilds
-      val modulePath = destinationRoot.resolve(path)
-      val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, destinationRoot, modulePath)
+      val modulePath = destinationRoot.resolve(path.replaceAll("-", "/"))
+      val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, destinationRoot,
+        modulePath, modulePaths, moduleOutputs)
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)
@@ -51,9 +60,8 @@ object SimpleGradleConvert {
 
     val settingsGradle = moolRoot.resolve("settings.gradle")
     val settings = includedBuilds.sortBy {_._1}.foldLeft("") { (buffer, prjNames) =>
-      val prjName = prjNames._1.replaceAll("/", "-")
       val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
-      buffer + s"include ':${prjName}'$comment\n"
+      buffer + s"include ':${prjNames._1}'$comment\n"
     }
 
     Files.write(settingsGradle,
