@@ -61,7 +61,7 @@ case class Bld(
       </properties>
 
       {
-      //fix for athena testdata
+      //BUILD_ROOT part of the fix for athena testdata
       if (path.contains("athena")) {
         <build>
           <plugins>
@@ -74,7 +74,7 @@ case class Bld(
                   <BUILD_ROOT>
                   {
                   //work around for needing a literal ${} inside of xml.
-                  xml.Text("${project.parent.parent.parent.parent.basedir}")
+                  xml.Text("${basedir}")
                   }
                   </BUILD_ROOT>
                 </environmentVariables>
@@ -87,13 +87,7 @@ case class Bld(
 
       {
       //fix for resources being loaded using the file system instead of as resources.
-      if (path == Seq("java", "com", "rocketfuel", "grid", "lookup", "dim", "DimTablesTest")) {
-        Bld.testWithExtractedDependencies
-      }
-      }
-
-      {
-      if (path == Seq("java", "com", "rocketfuel", "grid", "common", "hbase", "keylistformat", "filefetcher", "KeyValueFileFetcherTest")) {
+      if (Bld.requiresTestWithExtractedDependencies.contains(path)) {
         Bld.testWithExtractedDependencies
       }
       }
@@ -130,8 +124,16 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
     Select[Bld](s"SELECT $selectList FROM mool_dedup.blds")
 
   //Blds which aren't references to maven artifacts.
-  val localBlds =
+  val locals =
     Select[Bld](all.originalQueryText + " WHERE group_id IS NULL")
+
+  val athenaTests =
+    Select[Bld](
+      locals.originalQueryText +
+        """ AND rule_type LIKE '%test'
+          |AND path[1:5] = array['java', 'com', 'rocketfuel', 'modeling', 'athena']
+          |""".stripMargin
+    )
 
   override val selectByIdSql: CompiledStatement =
     s"SELECT $selectList FROM blds WHERE id = @id"
@@ -203,6 +205,12 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
 
   val selectByPathSql: Select[Bld] =
     Select[Bld](all.originalQueryText + " WHERE path = @path")
+
+  val requiresTestWithExtractedDependencies =
+    Set(
+      Seq("java", "com", "rocketfuel", "grid", "lookup", "dim", "DimTablesTest"),
+      Seq("java", "com", "rocketfuel", "grid", "common", "hbase", "keylistformat", "filefetcher", "KeyValueFileFetcherTest")
+    )
 
   val testWithExtractedDependencies: xml.Elem = {
     <build>
