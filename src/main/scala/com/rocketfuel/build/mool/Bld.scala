@@ -13,7 +13,9 @@ case class Bld(
   java_version: Option[String] = None,
   maven_specs: Option[Bld.MavenSpecs] = None,
   package_modules: Option[Vector[String]] = None,
-  package_tests: Option[Vector[String]] = None
+  package_tests: Option[Vector[String]] = None,
+  file_package: Option[String] = None,
+  extract_deps: Option[Vector[String]] = None
 ) {
 
   def language: String =
@@ -40,6 +42,11 @@ case class Bld(
       maybeDeps <- Vector(compileDeps, package_modules, package_tests)
       compileDep <- maybeDeps.getOrElse(Vector.empty)
     } yield Bld.relativePath(bldPath, compileDep)
+
+  def extractDepPaths(bldPath: MoolPath): Vector[MoolPath] =
+    for {
+      extractDep <- extract_deps.getOrElse(Vector.empty)
+    } yield Bld.relativePath(bldPath, extractDep)
 
 }
 

@@ -11,6 +11,14 @@ case class ModulePath(
 object ModulePath extends Deployable with SelectableById[ModulePath] {
   val list = Select[ModulePath]("SELECT * FROM mvn.module_paths")
 
+  def byId()(implicit connection: Connection): Map[Int, ModulePath] = {
+    for ((id, paths) <- ModulePath.list.vector().groupBy(_.id)) yield {
+      if (paths.size != 1)
+        throw new RuntimeException("unexpected duplicate primary id")
+      (id, paths.head)
+    }
+  }
+
   val deployQuery = Ignore.readClassResource(classOf[Identifier], "module_paths.sql")
 
   override def deploy()(implicit connection: Connection): Unit =

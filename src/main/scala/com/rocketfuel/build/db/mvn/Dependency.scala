@@ -15,7 +15,10 @@ case class Dependency(
   `type`: Option[String]
 ) {
 
-  lazy val mavenDefinition: Elem =
+  def mavenDefinition(exclusions: Map[Int, Set[Exclusion]]): Elem = {
+    val dependencyExclusions: Set[Exclusion] =
+      targetId.map(exclusions.getOrElse(_, Set.empty)).getOrElse(Set.empty)
+
     <dependency>
       <groupId>{groupId}</groupId>
       <artifactId>{artifactId}</artifactId>
@@ -25,7 +28,19 @@ case class Dependency(
         if (`type`.isDefined)
           <type>{`type`.get}</type>
       }
+      {
+        if (dependencyExclusions.nonEmpty) {
+          <exclusions>
+          {
+          for {
+            exclusion <- dependencyExclusions
+          } yield exclusion.mavenDefinition
+          }
+          </exclusions>
+        }
+      }
     </dependency>
+  }
 
   lazy val gradleDefinition: String = {
     s"${groupId}:${artifactId}:${version}"

@@ -1,6 +1,6 @@
 package com.rocketfuel.build.db
 
-import com.rocketfuel.build.db.mvn.DependencySupplements
+import com.rocketfuel.build.db.mvn.{DependencySupplements, Exclusion}
 import com.rocketfuel.sdbc.PostgreSql._
 import com.zaxxer.hikari.HikariConfig
 import java.nio.file.Paths
@@ -19,7 +19,9 @@ object MainDeploy extends App {
 
     Deploy.deploy()
 
-    val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
+    val moolRoot = Paths.get("/tmp/vostok")
+
+    Clone.vostok(moolRoot)
 
     val moolModel = com.rocketfuel.build.mool.Model.ofRepository(moolRoot)
 
@@ -32,6 +34,8 @@ object MainDeploy extends App {
     mool.dedup.Run.run()
 
     DependencySupplements.supplement()
+
+    Exclusion.run.ignore()
   }
 
 }

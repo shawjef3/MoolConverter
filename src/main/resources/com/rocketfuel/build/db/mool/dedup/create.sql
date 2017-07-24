@@ -29,7 +29,8 @@ CREATE TABLE mool_dedup.bld_additions (
   artifact_id text,
   version text,
   repo_url text,
-  classifier text
+  classifier text,
+  file_package text
 );
 
 CREATE TABLE mool_dedup.bld_removals (
@@ -94,7 +95,8 @@ CREATE TABLE mool_dedup.bld_to_bld_additions (
   id int DEFAULT nextval('mool.bld_to_bld_id_seq') PRIMARY KEY,
   source_id int NOT NULL,
   target_id int NOT NULL,
-  is_compile bool NOT NULL
+  is_compile bool NOT NULL,
+  is_extract bool NOT NULL
 );
 
 CREATE OR REPLACE VIEW mool_dedup.bld_to_bld AS
@@ -125,6 +127,18 @@ BEGIN
   WHERE path = bld_path;
 
   RETURN bld_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.bld_path(bld_id int) RETURNS text AS $$
+DECLARE
+  bld_path text;
+BEGIN
+  SELECT path INTO STRICT bld_path
+  FROM mool_dedup.blds
+  WHERE id = bld_id;
+
+  RETURN bld_path;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -179,21 +193,21 @@ CREATE OR REPLACE FUNCTION mool_dedup.remove_dependency(remove_source_path text[
   SELECT mool_dedup.remove_dependency(mool_dedup.bld_id(remove_source_path), mool_dedup.bld_id(remove_target_path))
 $$ LANGUAGE sql;
 
-CREATE OR REPLACE FUNCTION mool_dedup.add_dependency(add_source_id int, add_target_id int, is_compile boolean) RETURNS setof int AS $$
-  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-  VALUES (add_source_id, add_target_id, is_compile)
+CREATE OR REPLACE FUNCTION mool_dedup.add_dependency(add_source_id int, add_target_id int, is_compile boolean, is_extract boolean) RETURNS setof int AS $$
+  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile, is_extract)
+  VALUES (add_source_id, add_target_id, is_compile, is_extract)
   RETURNING id
 $$ LANGUAGE sql;
 
-CREATE OR REPLACE FUNCTION mool_dedup.add_dependency(add_source_path text[], add_target_path text[], is_compile boolean) RETURNS setof int AS $$
+CREATE OR REPLACE FUNCTION mool_dedup.add_dependency(add_source_path text[], add_target_path text[], is_compile boolean, is_extract boolean) RETURNS setof int AS $$
 SELECT *
-FROM mool_dedup.add_dependency(mool_dedup.bld_id(add_source_path), mool_dedup.bld_id(add_target_path), is_compile)
+FROM mool_dedup.add_dependency(mool_dedup.bld_id(add_source_path), mool_dedup.bld_id(add_target_path), is_compile, is_extract)
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION mool_dedup.move_dependency_source(old_source_id int, new_source_id int, target_id_arg int) RETURNS bool AS $$
 BEGIN
-  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-    SELECT new_source_id, target_id_arg, is_compile
+  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile, is_extract)
+    SELECT new_source_id, target_id_arg, is_compile, is_extract
     FROM mool_dedup.bld_to_bld
     WHERE source_id = old_source_id
           AND target_id = target_id_arg;
@@ -216,8 +230,8 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION mool_dedup.move_dependency_target(source_id_arg int, old_target_id int, new_target_id int) RETURNS bool AS $$
 BEGIN
-  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-    SELECT source_id_arg, new_target_id, is_compile
+  INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile, is_extract)
+    SELECT source_id_arg, new_target_id, is_compile, is_extract
     FROM mool_dedup.bld_to_bld
     WHERE source_id = source_id_arg
           AND target_id = old_target_id;
@@ -409,7 +423,8 @@ BEGIN
   PERFORM mool_dedup.add_dependency(
     new_parent_id,
     target_id,
-    is_compile
+    is_compile,
+    is_extract
   )
   FROM mool_dedup.bld_to_bld
   WHERE
@@ -428,7 +443,8 @@ BEGIN
   PERFORM mool_dedup.add_dependency(
     new_parent_id,
     target_id,
-    true
+    true,
+    false
   )
   FROM mool_dedup.bld_to_bld
   WHERE
@@ -436,8 +452,8 @@ BEGIN
     AND is_compile;
 
   --The original BLDs depend on the new one.
-  PERFORM mool_dedup.add_dependency(parent0_id, new_parent_id, false);
-  PERFORM mool_dedup.add_dependency(parent1_id, new_parent_id, false);
+  PERFORM mool_dedup.add_dependency(parent0_id, new_parent_id, false, false);
+  PERFORM mool_dedup.add_dependency(parent1_id, new_parent_id, false, false);
 
   RETURN true;
 
@@ -543,3 +559,97 @@ BEGIN
   RETURN mool_dedup.move_into(parent0_id, parent1_id);
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE EXTENSION IF NOT EXISTS ltree;
+
+/**
+Move up the dependency tree, finding BLDs that depend on a given BLD.
+This function answers the question, "What depends on ___?"
+ */
+CREATE OR REPLACE FUNCTION mool_dedup.dependents_of(bld_id int) RETURNS TABLE (bld_id int) AS $$
+WITH RECURSIVE transitive_dependents AS (
+  SELECT
+    source_id AS dependent_id
+  FROM mool_dedup.bld_to_bld
+  WHERE target_id = bld_id
+  UNION
+  SELECT
+    bld_to_bld.source_id
+  FROM transitive_dependents
+  INNER JOIN mool_dedup.bld_to_bld
+    ON bld_to_bld.target_id = transitive_dependents.dependent_id
+)
+SELECT dependent_id
+FROM transitive_dependents
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.dependents_of(bld_path text[]) RETURNS TABLE (bld_id int) AS $$
+DECLARE
+  bld_id int = mool_dedup.bld_id(bld_path);
+BEGIN
+  RETURN QUERY
+  SELECT d.bld_id
+  FROM mool_dedup.dependents_of(bld_id) d;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.dependencies_of(bld_id int) RETURNS TABLE (bld_id int) AS $$
+WITH RECURSIVE transitive_dependencies AS (
+  SELECT
+    target_id AS dependency_id
+  FROM mool_dedup.bld_to_bld
+  WHERE source_id = bld_id
+  UNION
+  SELECT
+    bld_to_bld.target_id
+  FROM transitive_dependencies
+    INNER JOIN mool_dedup.bld_to_bld
+      ON bld_to_bld.source_id = transitive_dependencies.dependency_id
+)
+SELECT dependency_id
+FROM transitive_dependencies
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION mool_dedup.dependencies_of(bld_path text[]) RETURNS TABLE (bld_id int) AS $$
+DECLARE
+  bld_id int = mool_dedup.bld_id(bld_path);
+BEGIN
+  RETURN QUERY
+  SELECT d.bld_id
+  FROM mool_dedup.dependencies_of(bld_id) d;
+END;
+$$ LANGUAGE plpgsql;
+
+/*
+Not used yet, but could come in handy later. Very slow.
+
+To populate:
+REFRESH MATERIALIZED VIEW mool_dedup.transitive_dependencies;
+ */
+CREATE MATERIALIZED VIEW mool_dedup.transitive_dependencies (bld_id, dependencies) AS
+WITH RECURSIVE transitive_dependencies AS (
+  SELECT
+    source_id,
+    text2ltree(target_id :: text) AS dependencies,
+    target_id AS last
+  FROM mool_dedup.bld_to_bld
+  UNION ALL
+  SELECT
+    transitive_dependencies.source_id,
+    dependencies || (target_id :: text) AS dependencies,
+    target_id AS last
+  FROM transitive_dependencies
+  INNER JOIN mool_dedup.bld_to_bld
+    ON bld_to_bld.source_id = last
+)
+SELECT
+  transitive_dependencies.source_id AS bld_id,
+  dependencies
+FROM transitive_dependencies
+WHERE NOT EXISTS(
+  SELECT
+  FROM mool_dedup.bld_to_bld transitivity
+  WHERE transitivity.source_id = last
+)
+WITH NO DATA
+;

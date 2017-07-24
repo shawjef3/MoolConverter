@@ -24,6 +24,7 @@ object Deploy extends Deployable {
       mvn.Identifier +
       mvn.DependencySupplements +
       mvn.Dependency +
+      mvn.Exclusion +
       gradle.Schema +
       gradle.BuildTree +
       gradle.ProjectMapping +
