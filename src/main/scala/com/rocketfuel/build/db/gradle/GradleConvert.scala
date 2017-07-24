@@ -100,8 +100,9 @@ object GradleConvert extends Logger {
                                  fixedDestination
       c.copy(destination = fixedDestination2)
     }.toSet
-    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
-    fileCopier.copyAll()
+    throw new RuntimeException("FileCopier needs to be updated to Convert.copyFiles or Copy.copy")
+//    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
+//    fileCopier.copyAll()
   }
 
 

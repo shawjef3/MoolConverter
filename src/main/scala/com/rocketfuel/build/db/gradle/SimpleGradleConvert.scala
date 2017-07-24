@@ -12,8 +12,7 @@ object SimpleGradleConvert extends Logger {
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val copies = Copy.all.vector().toSet
-    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
-    fileCopier.copyAll()
+    Copy.copy(copies, moolRoot, destinationRoot)
   }
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
@@ -32,7 +31,7 @@ object SimpleGradleConvert extends Logger {
     val dependencies =
       com.rocketfuel.build.db.mvn.Dependency.list.vector().groupBy(_.sourceId)
 
-    val localBlds = Bld.localBlds.vector()
+    val localBlds = Bld.locals.vector()
 
     var includedBuilds = List[(String, Seq[String])]()
     val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
