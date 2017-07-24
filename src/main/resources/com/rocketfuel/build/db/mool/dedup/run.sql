@@ -63,6 +63,7 @@ SELECT mool_dedup.remove_source(
 SELECT mool_dedup.add_dependency(
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common'],
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'JsonConverter'],
+  false,
   false
 );
 
@@ -106,7 +107,7 @@ INSERT INTO mool_dedup.bld_to_bld_removals (bld_to_bld_id)
       ON target_id = targets.id
   WHERE targets.path = array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'RetargetingAdScoringInfo'];
 
-INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
+INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile, is_extract)
   WITH new_targets AS (
     SELECT id
     FROM mool.blds
@@ -115,7 +116,7 @@ INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
       array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'Common']
     )
   )
-  SELECT sources.id, new_targets.id, bld_to_bld.is_compile
+  SELECT sources.id, new_targets.id, bld_to_bld.is_compile, bld_to_bld.is_extract
   FROM mool.blds sources
     INNER JOIN mool.bld_to_bld
       ON sources.id = bld_to_bld.source_id
@@ -181,6 +182,7 @@ FROM utils_id
 SELECT mool_dedup.add_dependency(
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'utils', 'Utils'],
   ARRAY ['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'utils', 'RetargetingUtils'],
+  false,
   false
 );
 
@@ -200,6 +202,7 @@ SELECT mool_dedup.remove_source(
 SELECT mool_dedup.add_dependency(
   array['java', 'com', 'rocketfuel', 'server', 'util', 'SupportLib'],
   array['java', 'com', 'rocketfuel', 'server', 'util', 'ArrayUtils'],
+  false,
   false
 );
 
@@ -289,7 +292,7 @@ FROM (
          ('java/com/rocketfuel/modeling/common/UpliftScore.java')
      ) AS source(path);
 
-SELECT mool_dedup.add_dependency(array['java','com','rocketfuel','modeling','common','JavaSource'], path, false)
+SELECT mool_dedup.add_dependency(array['java','com','rocketfuel','modeling','common','JavaSource'], path, false, false)
 FROM (
        VALUES
          (array['java','com','rocketfuel','modeling','common','BidRequestScoringContext']),
@@ -340,8 +343,8 @@ WHERE blds.path = array['java','com','rocketfuel','ei','datamon','alert','AlertU
 Remove LongRunConversionsCampaignSelector and Modules. Dependencies on LongRunConversionsCampaignSelector or Modules point to LongRunConversion.
 */
 
-INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-  SELECT source.id, new_target.id, bld_to_bld.is_compile
+INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile, is_extract)
+  SELECT source.id, new_target.id, bld_to_bld.is_compile, bld_to_bld.is_extract
   FROM mool.bld_to_bld
     INNER JOIN mool.blds source
       ON source.id = bld_to_bld.source_id
@@ -429,11 +432,12 @@ INSERT INTO mool_dedup.bld_to_source_removals (bld_to_source_id)
 SELECT mool_dedup.add_dependency(
   array['java','com','rocketfuel','modeling','athena','core','modules','Modules'],
   array['java','com','rocketfuel','modeling','athena','core','modules','BtModules'],
+  false,
   false
 );
 
-INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile)
-SELECT bld_to_bld.source_id, (SELECT id FROM mool.blds WHERE path = array['java','com','rocketfuel','modeling','athena','core','modules','Modules']), bld_to_bld.is_compile
+INSERT INTO mool_dedup.bld_to_bld_additions (source_id, target_id, is_compile, is_extract)
+SELECT bld_to_bld.source_id, (SELECT id FROM mool.blds WHERE path = array['java','com','rocketfuel','modeling','athena','core','modules','Modules']), bld_to_bld.is_compile, bld_to_bld.is_extract
 FROM mool.bld_to_bld
 WHERE bld_to_bld.target_id = (SELECT id FROM mool.blds WHERE path = array['java','com','rocketfuel','modeling','athena','core','modules','DefaultUserSelector']);
 
@@ -468,6 +472,7 @@ SELECT mool_dedup.remove_source(
 SELECT mool_dedup.add_dependency(
   array['java','com','rocketfuel','modeling','athena','core','workflow','WorkFlow'],
   array['java','com','rocketfuel','modeling','athena','core','workflow','RetargetingWorkFlow'],
+  false,
   false
 );
 
@@ -509,6 +514,7 @@ Remove BidRequestInputCols.java from ActSegmentAdapterCols.
 SELECT mool_dedup.add_dependency(
   array['java','com','rocketfuel','grid','dmp','ssvadapter','ActSegmentAdapterCols'],
   array['java','com','rocketfuel','grid','dmp','ssvadapter','BidRequestAdapterCols'],
+  false,
   false
 );
 
@@ -533,12 +539,14 @@ from SupportLib.
 SELECT mool_dedup.add_dependency(
   array['java','com','rocketfuel','server','util','SupportLib'],
   array['java','com','rocketfuel','server', 'util', 'CollectionUtils'],
+  false,
   false
 );
 
 SELECT mool_dedup.add_dependency(
   array['java','com','rocketfuel','server','util','SupportLib'],
   array['java','com','rocketfuel','server','util','StringHashFunction'],
+  false,
   false
 );
 
@@ -581,5 +589,28 @@ Add dependency from ['java', 'com', 'rocketfuel', 'grid', 'onlinestore', 'offlin
 SELECT mool_dedup.add_dependency(
   array['java', 'com', 'rocketfuel', 'grid', 'onlinestore', 'offlineupload', 'Base'],
   array['java', 'mvn', 'commons-cli', 'CommandLineInterface'],
+  false,
   false
 );
+
+--Avoid ClassNotFoundException during testing.
+SELECT mool_dedup.add_dependency(
+  array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'ml', 'models', 'ModelsTest'],
+  array['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'ml', 'models', 'AthenaLogisticRegressionModel'],
+  true,
+  false
+);
+
+--Avoid wrong version of AdScoringInfo.
+SELECT mool_dedup.remove_dependency(
+  ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'AdScoringInfo'],
+  ARRAY['java', 'mvn', 'com', 'rocketfuel', 'grid', 'modeling', 'GridModeling']
+);
+
+SELECT mool_dedup.add_dependency(
+  ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'AdScoringInfo'],
+  ARRAY['java', 'com', 'rocketfuel', 'modeling', 'athena', 'core', 'common', 'ModelingConstants'],
+  false,
+  false
+);
+

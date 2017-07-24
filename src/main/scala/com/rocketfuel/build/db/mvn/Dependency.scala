@@ -6,6 +6,7 @@ import scala.xml._
 
 case class Dependency(
   sourceId: Int,
+  targetId: Option[Int],
   groupId: String,
   artifactId: String,
   version: String,
@@ -13,7 +14,10 @@ case class Dependency(
   `type`: Option[String]
 ) {
 
-  lazy val mavenDefinition: Elem =
+  def mavenDefinition(exclusions: Map[Int, Set[Exclusion]]): Elem = {
+    val dependencyExclusions: Set[Exclusion] =
+      targetId.map(exclusions.getOrElse(_, Set.empty)).getOrElse(Set.empty)
+
     <dependency>
       <groupId>{groupId}</groupId>
       <artifactId>{artifactId}</artifactId>
@@ -23,13 +27,25 @@ case class Dependency(
         if (`type`.isDefined)
           <type>{`type`.get}</type>
       }
+      {
+        if (dependencyExclusions.nonEmpty) {
+          <exclusions>
+          {
+          for {
+            exclusion <- dependencyExclusions
+          } yield exclusion.mavenDefinition
+          }
+          </exclusions>
+        }
+      }
     </dependency>
+  }
 
 }
 
 object Dependency extends Deployable {
   val list =
-    Select[Dependency]("SELECT source_id sourceId, group_id groupId, artifact_id artifactId, version, scope, type FROM mvn.all_dependencies")
+    Select[Dependency]("SELECT source_id sourceId, target_id targetId, group_id groupId, artifact_id artifactId, version, scope, type FROM mvn.all_dependencies")
 
   val selectBySourceId =
     Select[Dependency](list.originalQueryText + " WHERE source_id = @sourceId")
