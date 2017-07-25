@@ -16,6 +16,7 @@ object SimpleGradleConvert extends Logger {
   }
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
+    val projectsRoot = destinationRoot.resolve("projects")
 
     val modulePaths = {
       for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
@@ -48,8 +49,8 @@ object SimpleGradleConvert extends Logger {
 
       val path = modulePaths(bld.id)
       includedBuilds = (path, bld.path) :: includedBuilds
-      val modulePath = destinationRoot.resolve(path.replaceAll("-", "/"))
-      val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, destinationRoot,
+      val modulePath = projectsRoot.resolve(path.replaceAll("-", "/"))
+      val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, projectsRoot,
         modulePath, modulePaths, moduleOutputs)
       val gradlePath = modulePath.resolve("build.gradle")
 
@@ -57,7 +58,7 @@ object SimpleGradleConvert extends Logger {
       Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 
-    val settingsGradle = moolRoot.resolve("settings.gradle")
+    val settingsGradle = destinationRoot.resolve("settings.gradle")
     val settings = includedBuilds.sortBy {_._1}.foldLeft("") { (buffer, prjNames) =>
       val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
       buffer + s"include ':${prjNames._1}'$comment\n"
@@ -68,18 +69,5 @@ object SimpleGradleConvert extends Logger {
       StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.CREATE)
 
-    //
-//    Parents.writeRoot(destinationRoot)
-//    Parents.writeCheckStyle(destinationRoot)
-//    Parents.`Scala-common`.write(destinationRoot, Set())
-//
-//    val parentPoms =
-//      localBlds.foldLeft(Parents.Poms.Empty) {
-//        case (poms, bld) =>
-//          val moduleRoot = modulePaths(bld.id)
-//          poms.add(bld, moduleRoot)
-//      }
-//
-//    parentPoms.write(destinationRoot)
   }
 }
