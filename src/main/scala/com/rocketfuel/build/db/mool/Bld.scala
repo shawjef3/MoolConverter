@@ -21,7 +21,8 @@ case class Bld(
   repoUrl: Option[String] = None,
   classifier: Option[String] = None,
   filePackage: Option[String] = None,
-  testGroups: Option[String] = None
+  testGroups: Option[String] = None,
+  mainClass: Option[String] = None
 ) {
 
   def pom(
@@ -115,7 +116,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       "repo_url" -> "repoUr",
       "classifier" -> "classifier",
       "file_package" -> "filePackage",
-      "test_groups" -> "testGroups"
+      "test_groups" -> "testGroups",
+      "main_class" -> "mainClass"
     )
 
   private val selectList = {
@@ -155,7 +157,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         |  repo_url text,
         |  classifier text,
         |  file_package text,
-        |  test_groups text
+        |  test_groups text,
+        |  main_class text
         |)
         |""".stripMargin
     )
@@ -175,7 +178,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  repo_url,
       |  classifier,
       |  file_package,
-      |  test_groups
+      |  test_groups,
+      |  main_class
       |) VALUES (
       |  @path,
       |  @ruleType,
@@ -187,7 +191,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  @repoUrl,
       |  @classifier,
       |  @filePackage,
-      |  @testGroups
+      |  @testGroups,
+      |  @mainClass
       |) RETURNING id
       |""".stripMargin
 
@@ -205,7 +210,8 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         repoUrl = bld.maven_specs.map(_.repo_url),
         classifier = bld.maven_specs.flatMap(_.classifier),
         filePackage = bld.file_package,
-        testGroups = bld.test_groups.map(_.mkString(","))
+        testGroups = bld.test_groups.map(_.mkString(",")),
+        mainClass =  bld.main_class
       )
     )
   }
