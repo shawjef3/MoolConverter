@@ -28,7 +28,7 @@ object RelCfgToBld extends Deployable with InsertableToValue[RelCfgToBld] with S
     )
 
   override def undeploy()(implicit connection: Connection): Unit =
-    Ignore.ignore("""DROP TABLE IF EXISTS mool.relcfg_to_bld""")
+    Ignore.ignore("""DROP TABLE IF EXISTS mool.relcfg_to_bld CASCADE""")
 
   override val insertSql: CompiledStatement =
     """INSERT INTO mool.relcfg_to_bld (
