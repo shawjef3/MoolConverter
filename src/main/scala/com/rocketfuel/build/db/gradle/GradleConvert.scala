@@ -150,9 +150,12 @@ object GradleConvert extends Logger {
           BuildGradleParts(compileDeps = Set(protoLib) ++ dependencyList,
             plugins = Set("plugin: 'java'", "plugin: 'com.google.protobuf'"),
             snippets = Set(protoConfigSnippet))
-        case "java_lib" | "java_bin" | "file_coll" =>
+        case "java_lib" | "file_coll" =>
           BuildGradleParts(compileDeps = dependencyList.toSet,
             plugins = Set("plugin: 'java'"))
+        case "java_bin" =>
+          BuildGradleParts(compileDeps = dependencyList.toSet,
+            plugins = Set("plugin: 'java'", "plugin: 'com.github.johnrengelman.shadow'"))
         case "java_test" =>
           // 'from: "${' will be interpolated by Gradle
           BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
@@ -162,7 +165,7 @@ object GradleConvert extends Logger {
           BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),
             snippets = Set(thriftConfigSnippet),
             compileDeps = Set(thriftLib) ++ dependencyList)
-        case "scala_lib" | "scala_bin" =>
+        case "scala_lib" =>
           prjBld.scalaVersion match {
             case Some("2.10") =>
               BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList,
@@ -175,6 +178,26 @@ object GradleConvert extends Logger {
               BuildGradleParts( // TODO should have 2.12 libs
                 compileDeps = dependencyList.toSet,
                 plugins = Set("plugin: 'scala'"))
+            case _ =>
+              // what version is this?
+              logger.warn(s"scala_lib with unknown version ${prjBld}")
+              BuildGradleParts(
+                compileDeps = dependencyList.toSet,
+                plugins = Set("plugin: 'scala'"))
+          }
+        case "scala_bin" =>
+          prjBld.scalaVersion match {
+            case Some("2.10") =>
+              BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'")) //, "com.adtran.scala-multiversion-plugin"),
+            //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
+            case Some("2.11") =>
+              BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"))
+            case Some("2.12") =>
+              BuildGradleParts( // TODO should have 2.12 libs
+                compileDeps = dependencyList.toSet,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"))
             case _ =>
               // what version is this?
               logger.warn(s"scala_lib with unknown version ${prjBld}")
