@@ -42,6 +42,21 @@ object GradleConvert extends Logger {
       |  useTestNG()
       |}
       |""".stripMargin
+  private val testNGConfigSnippetWithGroupsPre =
+    """
+      |test {
+      |  useTestNG() {
+      |    includeGroups """.stripMargin
+  private val testNGConfigSnippetWithGroupsPost =
+    """
+      |  }
+      |}
+      |""".stripMargin
+  def testNGConfig(testGroups: Option[String]): String = {
+    testGroups.map(groups =>
+      testNGConfigSnippetWithGroupsPre + groups.split(",").map { "'" + _ + "'"}.mkString(", ") + testNGConfigSnippetWithGroupsPost
+    ).getOrElse(testNGConfigSnippet)
+  }
   private val scala210Libs = List("  compile 'org.scala-lang:scala-library:2.10.4'",
     "  compile 'org.scala-lang:scala-actors:2.10.4'"
   )
@@ -141,7 +156,7 @@ object GradleConvert extends Logger {
         case "java_test" =>
           // 'from: "${' will be interpolated by Gradle
           BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
-            snippets = Set(testNGConfigSnippet),
+            snippets = Set(testNGConfig(prjBld.testGroups)),
             compileDeps = dependencyList.toSet)
         case "java_thrift_lib" =>
           BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),

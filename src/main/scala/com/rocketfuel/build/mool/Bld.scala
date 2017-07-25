@@ -15,7 +15,8 @@ case class Bld(
   package_modules: Option[Vector[String]] = None,
   package_tests: Option[Vector[String]] = None,
   file_package: Option[String] = None,
-  extract_deps: Option[Vector[String]] = None
+  extract_deps: Option[Vector[String]] = None,
+  test_groups: Option[Vector[String]] = None
 ) {
 
   def language: String =

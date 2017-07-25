@@ -30,7 +30,8 @@ CREATE TABLE mool_dedup.bld_additions (
   version text,
   repo_url text,
   classifier text,
-  file_package text
+  file_package text,
+  test_groups text
 );
 
 CREATE TABLE mool_dedup.bld_removals (
