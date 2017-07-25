@@ -108,51 +108,13 @@ object GradleConvert extends Logger {
 
   def gradle(identifier: Identifier, prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
              moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
-    def setupBuildGradle = {
-      prjBld.ruleType match {
-        case "java_proto_lib" =>
-          BuildGradleParts(compileDeps = Set(protoLib),
-            plugins = Set("plugin: 'java'", "plugin: 'com.google.protobuf'"),
-            snippets = Set(protoConfigSnippet))
-        case "java_test" =>
-          // 'from: "${' will be interpolated by Gradle
-          BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
-            snippets = Set(testNGConfigSnippet))
-        case "java_thrift_lib" =>
-          BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),
-            snippets = Set(thriftConfigSnippet),
-            compileDeps = Set(thriftLib))
-        case "scala_lib" =>
-          prjBld.scalaVersion match {
-            case Some("2.10") =>
-              BuildGradleParts(compileDeps = scala210Libs.toSet,
-                plugins = Set("plugin: 'scala'")) //, "com.adtran.scala-multiversion-plugin"),
-            //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
-            case Some("2.11") =>
-              BuildGradleParts(compileDeps = scala211Libs.toSet,
-                plugins = Set("plugin: 'scala'"))
-            case Some("2.12") =>
-              BuildGradleParts( // TODO should have 2.12 libs
-                plugins = Set("plugin: 'scala'"))
-            case _ =>
-              // what version is this?
-              logger.warn(s"scala_lib with unknown version ${prjBld}")
-              BuildGradleParts(
-                plugins = Set("plugin: 'scala'"))
-          }
-        case _ =>
-          BuildGradleParts()
-      }
-    }
-
-    val buildGradleParts = dependencies.foldLeft(setupBuildGradle) { case (build, dep) =>
-        moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
+    lazy val dependencyList = dependencies.foldLeft(List[String]()) { case (depList, dep) =>
+      moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
         case Some(depPath) =>
           val configuration = dep.scope match {
             case "provided" => "compileOnly"
             case "test" => "testCompile"
-            case scope =>
-              "compile"
+            case _ => "compile"
           }
           val projectOutputs = dep.`type` match {
             case Some("test-jar") => List(
@@ -161,13 +123,53 @@ object GradleConvert extends Logger {
             case _ => List(
               s"project(':${depPath}')")
           }
-          build.copy(compileDeps = build.compileDeps ++ projectOutputs.map(output => s"  ${configuration} ${output}"))
+          depList ++ projectOutputs.map(output => s"  ${configuration} ${output}")
         case _ =>
-          build.copy(compileDeps = build.compileDeps + dep.gradleDependency)
+          depList ++ List(dep.gradleDependency)
       }
     }
-    if (identifier.artifactId.contains("ZeroCopyByteString")) {
-      logger.info(s"${identifier} -> ${buildGradleParts}")
+
+    val buildGradleParts = {
+      prjBld.ruleType match {
+        case "java_proto_lib" =>
+          BuildGradleParts(compileDeps = Set(protoLib) ++ dependencyList,
+            plugins = Set("plugin: 'java'", "plugin: 'com.google.protobuf'"),
+            snippets = Set(protoConfigSnippet))
+        case "java_lib" | "java_bin" | "file_coll" =>
+          BuildGradleParts(compileDeps = dependencyList.toSet,
+            plugins = Set("plugin: 'java'"))
+        case "java_test" =>
+          // 'from: "${' will be interpolated by Gradle
+          BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
+            snippets = Set(testNGConfigSnippet),
+            compileDeps = dependencyList.toSet)
+        case "java_thrift_lib" =>
+          BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),
+            snippets = Set(thriftConfigSnippet),
+            compileDeps = Set(thriftLib) ++ dependencyList)
+        case "scala_lib" | "scala_bin" =>
+          prjBld.scalaVersion match {
+            case Some("2.10") =>
+              BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList,
+                plugins = Set("plugin: 'scala'")) //, "com.adtran.scala-multiversion-plugin"),
+            //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
+            case Some("2.11") =>
+              BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList,
+                plugins = Set("plugin: 'scala'"))
+            case Some("2.12") =>
+              BuildGradleParts( // TODO should have 2.12 libs
+                compileDeps = dependencyList.toSet,
+                plugins = Set("plugin: 'scala'"))
+            case _ =>
+              // what version is this?
+              logger.warn(s"scala_lib with unknown version ${prjBld}")
+              BuildGradleParts(
+                compileDeps = dependencyList.toSet,
+                plugins = Set("plugin: 'scala'"))
+          }
+        case _ =>
+          BuildGradleParts(plugins = Set("plugin: 'base'"))
+      }
     }
 
     val buildGradleText =

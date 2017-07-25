@@ -38,9 +38,6 @@ object SimpleGradleConvert extends Logger {
     val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
       val identifier = identifiers(bld.id)
       val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
-      if (output.contains("Duplex")) {
-        logger.info(s"${output} produced by ${bld}")
-      }
       moduleOuts + (output -> bld.id)
     }
     for (bld <- localBlds) {
