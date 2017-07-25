@@ -16,7 +16,7 @@ TODO: check if there are copied sources not mapped into build
 case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
                             compileDeps: Set[String] = Set.empty,
                             compileTestDeps: Set[String] = Set.empty,
-                            plugins: Set[String] = Set("java"),
+                            plugins: Set[String] = Set("plugin: 'java'"),
                             snippets: Set[String] = Set.empty,
                             useTestNg: Boolean = false)
 
@@ -112,57 +112,66 @@ object GradleConvert extends Logger {
       prjBld.ruleType match {
         case "java_proto_lib" =>
           BuildGradleParts(compileDeps = Set(protoLib),
-            plugins = Set("java", "com.google.protobuf"),
+            plugins = Set("plugin: 'java'", "plugin: 'com.google.protobuf'"),
             snippets = Set(protoConfigSnippet))
         case "java_test" =>
-          BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
+          // 'from: "${' will be interpolated by Gradle
+          BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
             snippets = Set(testNGConfigSnippet))
         case "java_thrift_lib" =>
-          BuildGradleParts(plugins = Set("java", "org.jruyi.thrift"),
+          BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),
             snippets = Set(thriftConfigSnippet),
             compileDeps = Set(thriftLib))
         case "scala_lib" =>
           prjBld.scalaVersion match {
             case Some("2.10") =>
               BuildGradleParts(compileDeps = scala210Libs.toSet,
-                plugins = Set("scala")) //, "com.adtran.scala-multiversion-plugin"),
+                plugins = Set("plugin: 'scala'")) //, "com.adtran.scala-multiversion-plugin"),
             //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
             case Some("2.11") =>
               BuildGradleParts(compileDeps = scala211Libs.toSet,
-                plugins = Set("scala"))
+                plugins = Set("plugin: 'scala'"))
             case Some("2.12") =>
               BuildGradleParts( // TODO should have 2.12 libs
-                plugins = Set("scala"))
+                plugins = Set("plugin: 'scala'"))
             case _ =>
               // what version is this?
               logger.warn(s"scala_lib with unknown version ${prjBld}")
               BuildGradleParts(
-                plugins = Set("scala"))
+                plugins = Set("plugin: 'scala'"))
           }
         case _ =>
           BuildGradleParts()
       }
     }
 
-    if (identifier.artifactId.contains("ScalaBase")) {
-      logger.info(s"${identifier} -> ${prjBld}")
-    }
     val buildGradleParts = dependencies.foldLeft(setupBuildGradle) { case (build, dep) =>
         moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
         case Some(depPath) =>
           val configuration = dep.scope match {
             case "provided" => "compileOnly"
             case "test" => "testCompile"
-            case _ => "compile"
+            case scope =>
+              "compile"
           }
-          build.copy(compileDeps = build.compileDeps + s"  ${configuration} project(':${depPath}')")
+          val projectOutputs = dep.`type` match {
+            case Some("test-jar") => List(
+              s"project(':${depPath}')",
+              s"project(path: ':${depPath}', configuration: 'tests')")
+            case _ => List(
+              s"project(':${depPath}')")
+          }
+          build.copy(compileDeps = build.compileDeps ++ projectOutputs.map(output => s"  ${configuration} ${output}"))
         case _ =>
           build.copy(compileDeps = build.compileDeps + dep.gradleDependency)
       }
     }
+    if (identifier.artifactId.contains("ZeroCopyByteString")) {
+      logger.info(s"${identifier} -> ${buildGradleParts}")
+    }
 
     val buildGradleText =
-      buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
+      buildGradleParts.plugins.map(p => s"apply ${p}").mkString("\n") + "\n\n" +
       buildGradleParts.snippets.mkString("\n") +
         """
           |
