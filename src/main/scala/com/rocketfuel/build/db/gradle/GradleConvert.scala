@@ -57,6 +57,16 @@ object GradleConvert extends Logger {
       testNGConfigSnippetWithGroupsPre + groups.split(",").map { "'" + _ + "'"}.mkString(", ") + testNGConfigSnippetWithGroupsPost
     ).getOrElse(testNGConfigSnippet)
   }
+  private val shadowJarSnippet =
+    """shadowJar {
+      |  manifest {
+      |    attributes 'Main-Class': '__MAIN_CLASS__'
+      |  }
+      |}
+      |""".stripMargin
+  def shadowJarConfig(mainClass: Option[String]): Option[String] =
+    mainClass.map(mClz => shadowJarSnippet.replace("__MAIN_CLASS__", mClz))
+
   private val scala210Libs = List("  compile 'org.scala-lang:scala-library:2.10.4'",
     "  compile 'org.scala-lang:scala-actors:2.10.4'"
   )
@@ -155,7 +165,8 @@ object GradleConvert extends Logger {
             plugins = Set("plugin: 'java'"))
         case "java_bin" =>
           BuildGradleParts(compileDeps = dependencyList.toSet,
-            plugins = Set("plugin: 'java'", "plugin: 'com.github.johnrengelman.shadow'"))
+            plugins = Set("plugin: 'java'", "plugin: 'com.github.johnrengelman.shadow'"),
+            snippets = shadowJarConfig(prjBld.mainClass).toSet)
         case "java_test" =>
           // 'from: "${' will be interpolated by Gradle
           BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
@@ -189,7 +200,8 @@ object GradleConvert extends Logger {
           prjBld.scalaVersion match {
             case Some("2.10") =>
               BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'")) //, "com.adtran.scala-multiversion-plugin"),
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"),
+                snippets = shadowJarConfig(prjBld.mainClass).toSet) //, "com.adtran.scala-multiversion-plugin"),
             //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
             case Some("2.11") =>
               BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList,
