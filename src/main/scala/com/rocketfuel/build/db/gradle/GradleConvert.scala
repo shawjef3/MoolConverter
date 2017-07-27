@@ -29,6 +29,11 @@ object GradleConvert extends Logger {
       |    path = "${System.env.HOME}/.mooltool/packages/protobuf/bin/protoc"
       |  }
       |}
+      |idea {
+      |    module {
+      |        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
+      |    }
+      |}
       |""".stripMargin
   private val thriftConfigSnippet =
     """
