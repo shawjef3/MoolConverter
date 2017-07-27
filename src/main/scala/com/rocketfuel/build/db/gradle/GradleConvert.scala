@@ -29,6 +29,12 @@ object GradleConvert extends Logger {
       |    path = "${System.env.HOME}/.mooltool/packages/protobuf/bin/protoc"
       |  }
       |}
+      |task sourcesJar(type: Jar, dependsOn: classes) {
+      |    classifier = 'sources'
+      |    from sourceSets.main.allSource
+      |    from sourceSets.main.proto
+      |    from "${protobuf.generatedFilesBaseDir}/main/java"
+      |}
       |idea {
       |    module {
       |        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
