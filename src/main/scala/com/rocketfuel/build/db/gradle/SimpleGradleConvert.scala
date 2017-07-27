@@ -8,13 +8,26 @@ import com.rocketfuel.build.db.mvn._
 import com.rocketfuel.build.db.mool.Bld
 import com.rocketfuel.sdbc.PostgreSql._
 
+// Filter a very small subset of project to test IDE integration quickly
 class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, String]) {
+
   def filterProject(bld: Bld): Boolean = {
     if (ignoredBlds.contains(bld.id)) {
       SimpleGradleConvert.logger.info(s"ignore bld ${bld.path}")
       false
     }
-    else true
+    else {
+      val path = modulePaths(bld.id)
+      if (path.startsWith("server-util-") ||
+        path.startsWith("common-message-") ||
+        path == "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto" ||
+        path == "server-geoip-TimeZone" ||
+        path == "3rd_party-java-mvn-org-apache-hadoop-HadoopAll2" ||
+        path == "3rd_party-java-mvn-org-ostermiller-Utils")
+        true
+      else
+        false
+    }
   }
 
 }
