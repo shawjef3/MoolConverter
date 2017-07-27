@@ -134,7 +134,7 @@ object GradleConvert extends Logger {
   def sourceCompatibility(javaVersion: Option[String]): String =
     "sourceCompatibility = " + javaVersion.getOrElse("1.7")
 
-  def gradle(identifier: Identifier, prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
+  def gradle(prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
              moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
     lazy val dependencyList = dependencies.foldLeft(List[String]()) { case (depList, dep) =>
       moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
