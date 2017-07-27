@@ -168,7 +168,7 @@ object GradleConvert extends Logger {
         case _ =>
           depList ++ List(dep.gradleDependency)
       }
-    }
+    }.toSet
 
     val buildGradleParts = {
       prjBld.ruleType match {
@@ -177,92 +177,58 @@ object GradleConvert extends Logger {
             plugins = Set("plugin: 'java'", "plugin: 'com.google.protobuf'"),
             snippets = Set(protoConfigSnippet))
         case "java_lib" | "file_coll" =>
-          BuildGradleParts(compileDeps = dependencyList.toSet,
+          BuildGradleParts(compileDeps = dependencyList,
             plugins = Set("plugin: 'java'"),
             snippets = Set(sourceCompatibility(prjBld.javaVersion)))
         case "java_bin" =>
-          BuildGradleParts(compileDeps = dependencyList.toSet,
+          BuildGradleParts(compileDeps = dependencyList,
             plugins = Set("plugin: 'java'", "plugin: 'com.github.johnrengelman.shadow'"),
             snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion))
         case "java_test" =>
           // 'from: "${' will be interpolated by Gradle
           BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
             snippets = Set(testNGConfig(prjBld.testGroups)) + sourceCompatibility(prjBld.javaVersion),
-            compileDeps = dependencyList.toSet)
+            compileDeps = dependencyList)
         case "java_thrift_lib" =>
           BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),
             snippets = Set(thriftConfigSnippet) + sourceCompatibility(prjBld.javaVersion),
             compileDeps = Set(thriftLib) ++ dependencyList)
         case "scala_lib" =>
-          prjBld.scalaVersion match {
-            case Some("2.10") =>
-              BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList,
-                plugins = Set("plugin: 'scala'"), //, "com.adtran.scala-multiversion-plugin"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion))) // if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
-            case Some("2.11") =>
-              BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList,
-                plugins = Set("plugin: 'scala'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion)))
-            case Some("2.12") =>
-              BuildGradleParts( // TODO should have 2.12 libs
-                compileDeps = dependencyList.toSet,
-                plugins = Set("plugin: 'scala'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion)))
+          val compileDeps = prjBld.scalaVersion match {
+            case Some("2.10") => scala210Libs.toSet ++ dependencyList
+            case Some("2.11") => scala211Libs.toSet ++ dependencyList
+            case Some("2.12") => dependencyList // TODO should have 2.12 libs
             case _ =>
-              // what version is this?
               logger.warn(s"scala_lib with unknown version ${prjBld}")
-              BuildGradleParts(
-                compileDeps = dependencyList.toSet,
-                plugins = Set("plugin: 'scala'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion)))
+              dependencyList
           }
+          BuildGradleParts(compileDeps = compileDeps,
+            plugins = Set("plugin: 'scala'"),
+            snippets = Set(sourceCompatibility(prjBld.javaVersion)))
         case "scala_test" =>
-          prjBld.scalaVersion match {
-            case Some("2.10") =>
-              BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList + scalatestLibs,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
-            case Some("2.11") =>
-              BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList + scalatestLibs,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
-            case Some("2.12") =>
-              BuildGradleParts( // TODO should have 2.12 libs
-                compileDeps = dependencyList.toSet + scalatestLibs,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
+          val compileDeps = prjBld.scalaVersion match {
+            case Some("2.10") => scala210Libs.toSet ++ dependencyList + scalatestLibs
+            case Some("2.11") => scala211Libs.toSet ++ dependencyList + scalatestLibs
+            case Some("2.12") => dependencyList + scalatestLibs // TODO should have 2.12 libs
             case _ =>
-              // what version is this?
-              logger.warn(s"scala_lib with unknown version ${prjBld}")
-              BuildGradleParts(
-                compileDeps = dependencyList.toSet + scalatestLibs,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
-                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
+              logger.warn(s"scala_test with unknown version ${prjBld}")
+              dependencyList.toSet + scalatestLibs
           }
+          BuildGradleParts(compileDeps = compileDeps,
+            plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
+            snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
         case "scala_bin" =>
-          prjBld.scalaVersion match {
-            case Some("2.10") =>
-              BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"),
-                snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion)) //, "com.adtran.scala-multiversion-plugin"),
-            //            snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks))
-            case Some("2.11") =>
-              BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"),
-                snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion))
-            case Some("2.12") =>
-              BuildGradleParts( // TODO should have 2.12 libs
-                compileDeps = dependencyList.toSet,
-                plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"),
-                snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion))
+          val compileDeps = prjBld.scalaVersion match {
+            case Some("2.10") => scala210Libs.toSet ++ dependencyList
+            case Some("2.11") => scala211Libs.toSet ++ dependencyList
+            case Some("2.12") => dependencyList // TODO should have 2.12 libs
             case _ =>
-              // what version is this?
               logger.warn(s"scala_lib with unknown version ${prjBld}")
-              BuildGradleParts(
-                compileDeps = dependencyList.toSet,
-                plugins = Set("plugin: 'scala'"),
-                snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion))
+              dependencyList
           }
+          BuildGradleParts(compileDeps = compileDeps,
+            plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"),
+            snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion))
         case _ =>
           BuildGradleParts(plugins = Set("plugin: 'base'"))
       }
