@@ -76,6 +76,14 @@ object GradleConvert extends Logger {
     "  compile 'org.scala-lang:scala-actors:2.10.4'"
   )
   private val scala211Libs = List("  compile 'org.scala-lang:scala-library:2.11.8'")
+  // use 1.4.2 with scalatest 3, now stick to 1.1
+  private val scalatestLibs = "  testRuntime 'org.pegdown:pegdown:1.1.0'"
+  private val scalatestSnippet =
+    """
+      |test {
+      |    maxParallelForks = 1
+      |}
+    """.stripMargin
   private val scala210Tasks = "rootProject.tasks.build210.dependsOn tasks.build\n"
   private val scala211Tasks = "rootProject.tasks.build211.dependsOn tasks.build\n"
 
@@ -207,6 +215,29 @@ object GradleConvert extends Logger {
                 compileDeps = dependencyList.toSet,
                 plugins = Set("plugin: 'scala'"),
                 snippets = Set(sourceCompatibility(prjBld.javaVersion)))
+          }
+        case "scala_test" =>
+          prjBld.scalaVersion match {
+            case Some("2.10") =>
+              BuildGradleParts(compileDeps = scala210Libs.toSet ++ dependencyList + scalatestLibs,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
+                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
+            case Some("2.11") =>
+              BuildGradleParts(compileDeps = scala211Libs.toSet ++ dependencyList + scalatestLibs,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
+                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
+            case Some("2.12") =>
+              BuildGradleParts( // TODO should have 2.12 libs
+                compileDeps = dependencyList.toSet + scalatestLibs,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
+                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
+            case _ =>
+              // what version is this?
+              logger.warn(s"scala_lib with unknown version ${prjBld}")
+              BuildGradleParts(
+                compileDeps = dependencyList.toSet + scalatestLibs,
+                plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
+                snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
           }
         case "scala_bin" =>
           prjBld.scalaVersion match {
