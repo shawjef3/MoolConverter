@@ -8,6 +8,8 @@ import com.rocketfuel.build.db.mvn._
 import com.rocketfuel.build.db.mool.Bld
 import com.rocketfuel.sdbc.PostgreSql._
 
+import scala.io.Source
+
 object SimpleGradleConvert extends Logger {
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
@@ -17,6 +19,11 @@ object SimpleGradleConvert extends Logger {
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val projectsRoot = destinationRoot.resolve("projects")
+
+    val ignoredProjects = {
+      for (ignore <- IgnoredBlds.list.iterator())
+      yield ignore.id -> ignore.path
+    }.toMap
 
     val modulePaths = {
       for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
@@ -41,18 +48,22 @@ object SimpleGradleConvert extends Logger {
       moduleOuts + (output -> bld.id)
     }
     for (bld <- localBlds) {
-      val identifier = identifiers(bld.id)
-      val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
+      if (!ignoredProjects.contains(bld.id)) {
+        val identifier = identifiers(bld.id)
+        val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
 
-      val path = modulePaths(bld.id)
-      includedBuilds = (path, bld.path) :: includedBuilds
-      val modulePath = projectsRoot.resolve(path.replaceAll("-", "/"))
-      val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, projectsRoot,
-        modulePath, modulePaths, moduleOutputs)
-      val gradlePath = modulePath.resolve("build.gradle")
+        val path = modulePaths(bld.id)
+        includedBuilds = (path, bld.path) :: includedBuilds
+        val modulePath = projectsRoot.resolve(path.replaceAll("-", "/"))
+        val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, projectsRoot,
+          modulePath, modulePaths, moduleOutputs)
+        val gradlePath = modulePath.resolve("build.gradle")
 
-      Files.createDirectories(modulePath)
-      Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+        Files.createDirectories(modulePath)
+        Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+      } else {
+        logger.info(s"ignore bld ${bld.path}")
+      }
     }
 
     val settingsGradle = destinationRoot.resolve("settings.gradle")

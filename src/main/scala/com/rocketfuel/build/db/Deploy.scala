@@ -30,7 +30,8 @@ object Deploy extends Deployable {
       gradle.ProjectMapping +
       gradle.GradleCopy +
       gradle.Dependency +
-      gradle.Library
+      gradle.Library +
+      gradle.IgnoredBlds
 
   override def deploy()(implicit connection: Connection): Unit =
     deploy.deploy()
