@@ -11,6 +11,55 @@ import com.rocketfuel.sdbc.PostgreSql._
 // Filter a very small subset of project to test IDE integration quickly
 class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, String]) {
 
+  private val quasarDeps =
+    """3rd_party-java-com-googlecode-protobuf-pro-duplex-DuplexLogProto
+      |3rd_party-java-com-googlecode-protobuf-pro-duplex-DuplexProtobufAll
+      |3rd_party-java-mvn-org-apache-curator-CuratorAll
+      |3rd_party-java-mvn-org-codehaus-jackson-JacksonAll
+      |common-rpcutils-DuplexProtocolJavaProto
+      |common-rpcutils-EmptyJavaProto
+      |dp-luke-LookupJavaProtos
+      |dp-luke-PageJavaProtos
+      |ei-common-Cache
+      |ei-common-RpcClient
+      |grid-common-metrics-collectors-MetricsCollector
+      |grid-common-metrics-reporters-AllReporters
+      |grid-common-spark-SparkCommon
+      |grid-common-utils-FileSystemUtil
+      |grid-dmp-ssvadapter-utils-HdfsUtilsLib
+      |grid-luke-service-client-ClientConf
+      |grid-luke-service-client-LookupClient
+      |grid-luke-service-client-LookupClientNoConf
+      |grid-luke-service-client-LookupRpcClient
+      |grid-luke-service-core-common-ByteSerDe
+      |grid-luke-service-core-common-ControlValue
+      |grid-luke-service-core-common-prod_conf-ServiceConfig
+      |grid-luke-service-core-common-RpcClientUtil
+      |grid-luke-service-core-common-ServiceConfig
+      |grid-luke-service-core-common-SizeCalculator
+      |grid-luke-service-core-common-Stringifier
+      |grid-luke-service-discovery-ServiceDiscovery
+      |grid-luke-service-exception-LukeException
+      |grid-luke-service-metrics-Common
+      |grid-luke-service-metrics-LookupRpcClientMetrics
+      |grid-luke-squeeze-payload-PayloadApi
+      |grid-luke-utils-Bytes
+      |grid-luke-utils-DataSize
+      |grid-quasar-config-Config
+      |grid-quasar-config-ConfigTypes
+      |grid-quasar-io-IO
+      |grid-quasar-lookup-Lookup
+      |grid-quasar-metric-Metric
+      |grid-quasar-process-Process
+      |grid-quasar-resources-conf-report_cfg
+      |grid-quasar-schema-Schema
+      |grid-quasar-schema-SchemaPojos
+      |grid-scrubplus-logformat-generated-pojo-GeneratedPojoLib
+      |grid-scrubplus-logformat-generated-proto_pojo-GeneratedProtoPojoLib
+      |3rd_party-java-mvn-org-json4s-Json4sAll2_11
+      |grid-common-spark-SparkCatalyst2_0
+      |grid-common-spark-SparkCore2_0
+    """.stripMargin.split("\n").toSet
   def filterProject(bld: Bld): Boolean = {
     if (ignoredBlds.contains(bld.id)) {
       SimpleGradleConvert.logger.info(s"ignore bld ${bld.path}")
@@ -20,10 +69,14 @@ class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, St
       val path = modulePaths(bld.id)
       if (path.startsWith("server-util-") ||
         path.startsWith("common-message-") ||
+        path.startsWith("grid-quasar-") ||
+        path.startsWith("grid-common-spark-Spark") ||
+
         path == "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto" ||
         path == "server-geoip-TimeZone" ||
         path == "3rd_party-java-mvn-org-apache-hadoop-HadoopAll2" ||
-        path == "3rd_party-java-mvn-org-ostermiller-Utils")
+        path == "3rd_party-java-mvn-org-ostermiller-Utils" ||
+        quasarDeps.contains(path))
         true
       else
         false
@@ -69,6 +122,7 @@ object SimpleGradleConvert extends Logger {
       moduleOuts + (output -> bld.id)
     }
     val prjFilter = new SmallProjectFilter(modulePaths, ignoredProjects)
+    // for (bld <- localBlds /*.filter(prjFilter.filterProject(_))*/) {
     for (bld <- localBlds.filter(prjFilter.filterProject(_))) {
       val path = modulePaths(bld.id)
       val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
