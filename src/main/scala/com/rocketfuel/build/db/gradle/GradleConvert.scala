@@ -17,8 +17,7 @@ case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
                             compileDeps: Set[String] = Set.empty,
                             compileTestDeps: Set[String] = Set.empty,
                             plugins: Set[String] = Set("plugin: 'java'"),
-                            snippets: Set[String] = Set.empty,
-                            useTestNg: Boolean = false)
+                            snippets: Set[String] = Set.empty)
 
 object GradleConvert extends Logger {
   // not s""": leave interpolation to Groovy/Gradle
@@ -47,12 +46,6 @@ object GradleConvert extends Logger {
       |  thriftExecutable "${System.env.HOME}/.mooltool/packages/thrift-0.9.1/bin/thrift"
       |}
       |""".stripMargin
-  private val testNGConfigSnippet =
-    """
-      |test {
-      |  useTestNG()
-      |}
-      |""".stripMargin
   private val testNGConfigSnippetWithGroupsPre =
     """
       |test {
@@ -64,9 +57,9 @@ object GradleConvert extends Logger {
       |}
       |""".stripMargin
   def testNGConfig(testGroups: Option[String]): String = {
-    testGroups.map(groups =>
-      testNGConfigSnippetWithGroupsPre + groups.split(",").map { "'" + _ + "'"}.mkString(", ") + testNGConfigSnippetWithGroupsPost
-    ).getOrElse(testNGConfigSnippet)
+    testNGConfigSnippetWithGroupsPre +
+      testGroups.getOrElse("unit").split(",").map { "'" + _ + "'"}.mkString(", ") +
+      testNGConfigSnippetWithGroupsPost
   }
   private val shadowJarSnippet =
     """shadowJar {
@@ -153,7 +146,7 @@ object GradleConvert extends Logger {
   def sourceCompatibility(javaVersion: Option[String]): String =
     "sourceCompatibility = " + javaVersion.getOrElse("1.7")
 
-  def gradle(prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
+  private def gradleForBld(prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
              moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
     lazy val dependencyList = dependencies.foldLeft(List[String]()) { case (depList, dep) =>
       moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
@@ -239,15 +232,42 @@ object GradleConvert extends Logger {
           BuildGradleParts(plugins = Set("plugin: 'base'"))
       }
     }
+    buildGradleParts
+  }
+
+  def gradle(path: String, prjBld: Bld, extraBlds: Map[Bld, Vector[MvnDependency]],
+             dependencies: Vector[MvnDependency], projectRoot: Path,
+             moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
+    if (!extraBlds.isEmpty) {
+      logger.info(s"prj ${moduleRoot} should merge with ${extraBlds}")
+    }
+    val buildGradleParts = extraBlds.foldLeft(gradleForBld(prjBld, dependencies, projectRoot, moduleRoot, modulePaths, moduleOutputs))
+      { (buildParts, extraBld) =>
+        val extraBuildParts = gradleForBld(extraBld._1, extraBld._2, projectRoot, moduleRoot, modulePaths, moduleOutputs)
+        // TODO merge those two
+        val updatedExtraDeps = extraBuildParts.compileDeps.filterNot { testDep =>
+          if (testDep.contains("':" + path + "'")) {
+            logger.info(s"eliminate test dependency on main source in ${path}")
+          }
+          buildParts.compileDeps.contains(testDep) || testDep.contains("':" + path + "'")
+        }.map {testDep =>
+            testDep.replace("  compile ", "  testCompile ")
+        }
+        BuildGradleParts(
+          compileDeps = buildParts.compileDeps ++ updatedExtraDeps,
+          snippets = buildParts.snippets ++ extraBuildParts.snippets,
+          plugins = buildParts.plugins ++ extraBuildParts.plugins
+        )
+      }
 
     val buildGradleText =
       buildGradleParts.plugins.map(p => s"apply ${p}").mkString("\n") + "\n\n" +
-      buildGradleParts.snippets.mkString("\n") +
+        buildGradleParts.snippets.mkString("\n") +
         """
           |
           |dependencies {
           |""".stripMargin +
-      buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
+        buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
         "\n}\n"
     buildGradleText
   }
@@ -297,7 +317,7 @@ object GradleConvert extends Logger {
                         plugins = build.plugins + "com.google.protobuf",
                         snippets = build.snippets + protoConfigSnippet), false)
                     case r if r == "java_test" =>
-                      (build.copy(snippets = build.snippets + testNGConfigSnippet), false)
+                      (build.copy(snippets = build.snippets + testNGConfig(None)), false)
                     case r if r == "java_thrift_lib" =>
                       (build.copy(plugins = build.plugins + "org.jruyi.thrift",
                         snippets = build.snippets + thriftConfigSnippet), false)

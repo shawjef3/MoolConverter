@@ -19,13 +19,14 @@ object Deploy extends Deployable {
       mool.IsAlias +
       mool.dedup.Deploy +
       mvn.Schema +
+      gradle.Schema +
+      gradle.BldJoins +
       mvn.ModulePath +
       mvn.Copy +
       mvn.Identifier +
       mvn.DependencySupplements +
       mvn.Dependency +
       mvn.Exclusion +
-      gradle.Schema +
       gradle.BuildTree +
       gradle.ProjectMapping +
       gradle.GradleCopy +

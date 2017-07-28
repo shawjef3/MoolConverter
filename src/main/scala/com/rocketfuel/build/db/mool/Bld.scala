@@ -141,7 +141,7 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
     )
 
   override val selectByIdSql: CompiledStatement =
-    s"SELECT $selectList FROM blds WHERE id = @id"
+    s"SELECT $selectList FROM mool_dedup.blds WHERE id = @id"
 
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(

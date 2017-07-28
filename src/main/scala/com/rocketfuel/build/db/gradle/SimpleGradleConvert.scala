@@ -12,37 +12,65 @@ import com.rocketfuel.sdbc.PostgreSql._
 class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, String]) {
 
   private val quasarDeps =
-    """3rd_party-java-com-googlecode-protobuf-pro-duplex-DuplexLogProto
+    """3rd_party-java-com-google-protobuf-ZeroCopyByteString
+      |3rd_party-java-com-googlecode-protobuf-pro-duplex-DuplexLogProto
       |3rd_party-java-com-googlecode-protobuf-pro-duplex-DuplexProtobufAll
+      |3rd_party-java-mvn-com-google-guava-GuavaTestLibAll
       |3rd_party-java-mvn-org-apache-curator-CuratorAll
+      |3rd_party-java-mvn-org-apache-curator-CuratorTestAll
       |3rd_party-java-mvn-org-codehaus-jackson-JacksonAll
+      |3rd_party-java-mvn-redis-clients-JedisAll
       |common-rpcutils-DuplexProtocolJavaProto
       |common-rpcutils-EmptyJavaProto
       |dp-luke-LookupJavaProtos
       |dp-luke-PageJavaProtos
       |ei-common-Cache
       |ei-common-RpcClient
+      |ei-common-RpcServer
       |grid-common-metrics-collectors-MetricsCollector
       |grid-common-metrics-reporters-AllReporters
       |grid-common-spark-SparkCommon
       |grid-common-utils-FileSystemUtil
       |grid-dmp-ssvadapter-utils-HdfsUtilsLib
+      |grid-luke-service-api-ServiceApi
+      |grid-luke-service-api-TestUtil
+      |grid-luke-service-api-chaining-ChainedTables
       |grid-luke-service-client-ClientConf
       |grid-luke-service-client-LookupClient
       |grid-luke-service-client-LookupClientNoConf
       |grid-luke-service-client-LookupRpcClient
+      |grid-luke-service-core-ClientTest
+      |grid-luke-service-core-L1Server
+      |grid-luke-service-core-L2Server
+      |grid-luke-service-core-LoggingConnectionEventListener
+      |grid-luke-service-core-LukeServer
+      |grid-luke-service-core-MiniCluster
       |grid-luke-service-core-common-ByteSerDe
       |grid-luke-service-core-common-ControlValue
       |grid-luke-service-core-common-prod_conf-ServiceConfig
+      |grid-luke-service-core-common-PageClient
+      |grid-luke-service-core-common-PageStore
       |grid-luke-service-core-common-RpcClientUtil
       |grid-luke-service-core-common-ServiceConfig
       |grid-luke-service-core-common-SizeCalculator
       |grid-luke-service-core-common-Stringifier
+      |grid-luke-service-core-lookupservice-LookupService
+      |grid-luke-service-core-lookupservice-RemotePageStore
+      |grid-luke-service-core-pageservice-PageService
+      |grid-luke-service-core-pageservice-RedisPageStore
       |grid-luke-service-discovery-ServiceDiscovery
       |grid-luke-service-exception-LukeException
       |grid-luke-service-metrics-Common
+      |grid-luke-service-metrics-LookupServiceMetrics
       |grid-luke-service-metrics-LookupRpcClientMetrics
+      |grid-luke-service-metrics-RedisPageStoreMetrics
+      |grid-luke-squeeze-payload-block-BlockerApi
+      |grid-luke-squeeze-payload-block-PayloadBlockerLib
+      |grid-luke-squeeze-payload-pagified-PagifiedPayloadApi
+      |grid-luke-squeeze-payload-pagified-PagifiedPayloadLib
       |grid-luke-squeeze-payload-PayloadApi
+      |grid-luke-squeeze-payload-PayloadLib
+      |grid-luke-squeeze-payload-PayloadTestLib
       |grid-luke-utils-Bytes
       |grid-luke-utils-DataSize
       |grid-quasar-config-Config
@@ -62,7 +90,7 @@ class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, St
     """.stripMargin.split("\n").toSet
   def filterProject(bld: Bld): Boolean = {
     if (ignoredBlds.contains(bld.id)) {
-      SimpleGradleConvert.logger.info(s"ignore bld ${bld.path}")
+      SimpleGradleConvert.logger.trace(s"ignore bld ${bld.path}")
       false
     }
     else {
@@ -104,6 +132,13 @@ object SimpleGradleConvert extends Logger {
         id -> path.replaceAll("/", "-")
     }.toMap
 
+    val prjRemapping: Map[Int, Int] = {
+      for (i <- BldJoins.list.iterator()) yield {
+        i.addedId -> i.id
+      }
+    }.toMap
+    val additionalBlds = prjRemapping.groupBy(_._2).mapValues(_.keys)
+
     val identifiers = {
       for (i <- Identifier.list.iterator()) yield {
         i.bldId -> i
@@ -121,15 +156,26 @@ object SimpleGradleConvert extends Logger {
       val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
       moduleOuts + (output -> bld.id)
     }
+    val localMergedBlds = localBlds.filter { bld => !prjRemapping.contains(bld.id)}
     val prjFilter = new SmallProjectFilter(modulePaths, ignoredProjects)
-    // for (bld <- localBlds /*.filter(prjFilter.filterProject(_))*/) {
-    for (bld <- localBlds.filter(prjFilter.filterProject(_))) {
+    // for (bld <- localMergedBlds /*.filter(prjFilter.filterProject(_))*/) {
+    for (bld <- localMergedBlds.filter(prjFilter.filterProject(_))) {
       val path = modulePaths(bld.id)
+      if (additionalBlds.contains(bld.id)) {
+        logger.info(s"prj ${path} should merge with ${additionalBlds(bld.id)}")
+      }
       val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
+      // pass extra builds with deps
+      val extraBlds = additionalBlds.getOrElse(bld.id, Set.empty[Int])
+        .map(Bld.selectById(_))
+        .flatten
+        .map { extraBld => (extraBld, dependencies.getOrElse(extraBld.id, Vector.empty))}
+        .toMap
 
       includedBuilds = (path, bld.path) :: includedBuilds
       val modulePath = projectsRoot.resolve(path.replaceAll("-", "/"))
-      val gradle = GradleConvert.gradle(bld, bldDependencies, projectsRoot,
+      val gradle = GradleConvert.gradle(path, bld, extraBlds, // Set.empty, // additionalBlds.getOrElse(bld.id, Set[Bld].empty),
+        bldDependencies, projectsRoot,
         modulePath, modulePaths, moduleOutputs)
       val gradlePath = modulePath.resolve("build.gradle")
 
