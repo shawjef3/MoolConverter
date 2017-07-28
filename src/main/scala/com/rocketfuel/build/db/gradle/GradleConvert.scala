@@ -19,7 +19,7 @@ case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
                             plugins: Set[String] = Set("plugin: 'java'"),
                             snippets: Set[String] = Set.empty)
 
-object GradleConvert extends Logger {
+class GradleConvert(projectRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) extends Logger {
   // not s""": leave interpolation to Groovy/Gradle
   private val protoConfigSnippet =
     """
@@ -56,11 +56,15 @@ object GradleConvert extends Logger {
       |  }
       |}
       |""".stripMargin
+
   def testNGConfig(testGroups: Option[String]): String = {
     testNGConfigSnippetWithGroupsPre +
-      testGroups.getOrElse("unit").split(",").map { "'" + _ + "'"}.mkString(", ") +
+      testGroups.getOrElse("unit").split(",").map {
+        "'" + _ + "'"
+      }.mkString(", ") +
       testNGConfigSnippetWithGroupsPost
   }
+
   private val shadowJarSnippet =
     """shadowJar {
       |  manifest {
@@ -68,6 +72,7 @@ object GradleConvert extends Logger {
       |  }
       |}
       |""".stripMargin
+
   def shadowJarConfig(mainClass: Option[String]): Option[String] =
     mainClass.map(mClz => shadowJarSnippet.replace("__MAIN_CLASS__", mClz))
 
@@ -92,8 +97,7 @@ object GradleConvert extends Logger {
   def sourceCompatibility(javaVersion: Option[String]): String =
     "sourceCompatibility = " + javaVersion.getOrElse("1.7")
 
-  private def gradleForBld(prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
-             moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
+  private def gradleForBld(prjBld: Bld, dependencies: Vector[MvnDependency], moduleRoot: Path) = {
     lazy val dependencyList = dependencies.foldLeft(List[String]()) { case (depList, dep) =>
       moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
         case Some(depPath) =>
@@ -182,29 +186,27 @@ object GradleConvert extends Logger {
   }
 
   def gradle(path: String, prjBld: Bld, extraBlds: Map[Bld, Vector[MvnDependency]],
-             dependencies: Vector[MvnDependency], projectRoot: Path,
-             moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
+             dependencies: Vector[MvnDependency], moduleRoot: Path) = {
     if (!extraBlds.isEmpty) {
       logger.info(s"prj ${moduleRoot} should merge with ${extraBlds}")
     }
-    val buildGradleParts = extraBlds.foldLeft(gradleForBld(prjBld, dependencies, projectRoot, moduleRoot, modulePaths, moduleOutputs))
-      { (buildParts, extraBld) =>
-        val extraBuildParts = gradleForBld(extraBld._1, extraBld._2, projectRoot, moduleRoot, modulePaths, moduleOutputs)
-        // TODO merge those two
-        val updatedExtraDeps = extraBuildParts.compileDeps.filterNot { testDep =>
-          if (testDep.contains("':" + path + "'")) {
-            logger.info(s"eliminate test dependency on main source in ${path}")
-          }
-          buildParts.compileDeps.contains(testDep) || testDep.contains("':" + path + "'")
-        }.map {testDep =>
-            testDep.replace("  compile ", "  testCompile ")
+    val buildGradleParts = extraBlds.foldLeft(gradleForBld(prjBld, dependencies, moduleRoot)) { (buildParts, extraBld) =>
+      val extraBuildParts = gradleForBld(extraBld._1, extraBld._2, moduleRoot)
+      // TODO merge those two
+      val updatedExtraDeps = extraBuildParts.compileDeps.filterNot { testDep =>
+        if (testDep.contains("':" + path + "'")) {
+          logger.info(s"eliminate test dependency on main source in ${path}")
         }
-        BuildGradleParts(
-          compileDeps = buildParts.compileDeps ++ updatedExtraDeps,
-          snippets = buildParts.snippets ++ extraBuildParts.snippets,
-          plugins = buildParts.plugins ++ extraBuildParts.plugins
-        )
+        buildParts.compileDeps.contains(testDep) || testDep.contains("':" + path + "'")
+      }.map { testDep =>
+        testDep.replace("  compile ", "  testCompile ")
       }
+      BuildGradleParts(
+        compileDeps = buildParts.compileDeps ++ updatedExtraDeps,
+        snippets = buildParts.snippets ++ extraBuildParts.snippets,
+        plugins = buildParts.plugins ++ extraBuildParts.plugins
+      )
+    }
 
     val buildGradleText =
       buildGradleParts.plugins.map(p => s"apply ${p}").mkString("\n") + "\n\n" +
@@ -218,99 +220,9 @@ object GradleConvert extends Logger {
     buildGradleText
   }
 
-  def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val prjNameMapping = ProjectMapping.projectNamesMapping()
-    val bldIdToPrjPath = ProjectMapping.list.vector().foldLeft(Map.empty[Int, String]) { (map, pm) =>
-      map + (pm.bld_id -> pm.prj_path)
-    }
+}
 
-    Dependency.list.vector().groupBy {_.prj_path}.filter {
-      case (prjPath, deps) =>
-        if (!prjNameMapping.contains(prjPath)) {
-          if (!deps.isEmpty)
-            logger.warn(s"Cannot find project for ${prjPath}")
-          false
-        } else {
-          true
-        }
-    }.foreach {
-        case (prjPath, deps) =>
-          val prjBuildGradle = moolRoot.resolve("projects/" + prjNameMapping(prjPath) + "/build.gradle")
-
-          var hasNonMavenDep = false
-          val buildGradleParts = deps.sortBy(_.path).foldLeft((BuildGradleParts(), true)) {
-            case ((build, isFirst), lib) =>
-              // TODO project cross-deps
-              if (lib.isMavenDep) {
-                val addedDependency = (prjNameMapping(prjPath), Library.libReference(lib.path))
-
-                if (addedDependency !=
-                  ("j-c-r-camus,grid-datascrub-grid.scrub", "com.rocketfuel.grid.thirdparty.hive.HiveExec")) {
-                  val dependency = "  compile libraries['" + addedDependency._2 + "']"
-                  (build.copy(compileDeps = build.compileDeps + dependency), false)
-                } else {
-                  logger.info(s"Ignored dependency ${addedDependency}")
-                  (build, false)
-                }
-              } else {
-                val depPrjPath = bldIdToPrjPath(lib.id)
-                if (depPrjPath == prjPath) {
-                  // BLD from our project. check for proto, scala and more to adjust project
-                  logger.trace(s"Customize ${prjPath} for ${lib}")
-                  lib.rule_type match {
-                    case r if r == "java_proto_lib" =>
-                      (build.copy(compileDeps = build.compileDeps + protoLib,
-                        plugins = build.plugins + "com.google.protobuf",
-                        snippets = build.snippets + protoConfigSnippet), false)
-                    case r if r == "java_test" =>
-                      (build.copy(snippets = build.snippets + testNGConfig(None)), false)
-                    case r if r == "java_thrift_lib" =>
-                      (build.copy(plugins = build.plugins + "org.jruyi.thrift",
-                        snippets = build.snippets + thriftConfigSnippet), false)
-                    case r if r == "scala_lib" =>
-                      (build.copy(
-                        compileDeps = build.compileDeps ++ (if (lib.scala_version.contains("2.10")) scala210Libs else scala211Libs),
-                        plugins = build.plugins ++ Set("scala", "com.adtran.scala-multiversion-plugin"),
-                        snippets = build.snippets + (if (lib.scala_version.contains("2.10")) scala210Tasks else scala211Tasks)), false)
-                    case _ =>
-                      (build, false)
-                  }
-                } else {
-                  hasNonMavenDep = true
-                  val newDeps = prjNameMapping.get(depPrjPath) match {
-                    case Some(dependency) =>
-                      val dependencyStr = "  compile project(':" + dependency + "')"
-                      logger.trace(s"Add dependency on ${depPrjPath} to ${prjPath}")
-                      build.compileDeps + dependencyStr
-                    case _ =>
-                      logger.warn(s"Cannot add dependency on ${depPrjPath} to ${prjPath}")
-                      build.compileDeps
-                  }
-                  (build.copy(compileDeps = newDeps), false)
-                }
-              }
-          }._1
-
-          val buildGradleText =
-            buildGradleParts.plugins.map(p => s"apply plugin: '${p}'").mkString("\n") + "\n\n" +
-            buildGradleParts.snippets.mkString("\n") +
-            """
-              |
-              |configurations.compile.transitive = false
-              |
-              |dependencies {
-              |""".stripMargin +
-            buildGradleParts.compileDeps.toSeq.sorted.mkString("\n") +
-            "\n}\n"
-
-
-          Files.createDirectories(prjBuildGradle.getParent)
-          Files.write(prjBuildGradle,
-            buildGradleText.getBytes,
-            StandardOpenOption.TRUNCATE_EXISTING,
-            StandardOpenOption.CREATE)
-    }
-  }
+object GradleConvert extends Logger {
 
   def loadResource(path: String): String = {
     val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))

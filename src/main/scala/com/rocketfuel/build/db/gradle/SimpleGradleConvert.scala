@@ -158,6 +158,7 @@ object SimpleGradleConvert extends Logger {
     }
     val localMergedBlds = localBlds.filter { bld => !prjRemapping.contains(bld.id)}
     val prjFilter = new SmallProjectFilter(modulePaths, ignoredProjects)
+    val convertor = new GradleConvert(projectsRoot, modulePaths, moduleOutputs)
     // for (bld <- localMergedBlds /*.filter(prjFilter.filterProject(_))*/) {
     for (bld <- localMergedBlds.filter(prjFilter.filterProject(_))) {
       val path = modulePaths(bld.id)
@@ -174,9 +175,7 @@ object SimpleGradleConvert extends Logger {
 
       includedBuilds = (path, bld.path) :: includedBuilds
       val modulePath = projectsRoot.resolve(path.replaceAll("-", "/"))
-      val gradle = GradleConvert.gradle(path, bld, extraBlds, // Set.empty, // additionalBlds.getOrElse(bld.id, Set[Bld].empty),
-        bldDependencies, projectsRoot,
-        modulePath, modulePaths, moduleOutputs)
+      val gradle = convertor.gradle(path, bld, extraBlds, bldDependencies, modulePath)
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)
