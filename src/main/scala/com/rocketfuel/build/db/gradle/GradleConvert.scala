@@ -89,60 +89,6 @@ object GradleConvert extends Logger {
   private val protoLib = "  compile files(\"${System.env.HOME}/.mooltool/packages/protobuf/java/target/protobuf-2.5.0.jar\")"
   private val thriftLib = "  compile 'org.apache.thrift:libthrift:0.9.1'"
 
-  def loadResource(path: String): String = {
-    val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
-    try source.mkString
-    finally source.close()
-  }
-
-  def rootBuildFiles(moolRoot: Path)(implicit connection: Connection) = {
-    val prjNameMapping = ProjectMapping.projectNamesMapping().map(_.swap)
-
-    val settingsGradle = moolRoot.resolve("settings.gradle")
-    val settings = prjNameMapping.toList.sorted.foldLeft("") { (buffer, prjNames) =>
-      val prjName = prjNames._1.replaceAll("/", "-")
-      val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
-      buffer + s"include ':${prjName}'$comment\n"
-    }
-
-    Files.write(settingsGradle,
-      (settings + loadResource("settings_end.gradle")).getBytes,
-      StandardOpenOption.TRUNCATE_EXISTING,
-      StandardOpenOption.CREATE)
-
-    val librariesGradle = moolRoot.resolve("gradle/libraries.gradle")
-    val libraries = Library.list.vector().filter { lib =>
-      lib.isMavenDep
-    }.sorted.foldLeft("ext.libraries = [\n") { (buffer, lib) =>
-      // TODO handle scala version
-      val classifier = ":" + lib.classifier.getOrElse("")
-      buffer + "  \"" + Library.libReference(lib.path) + "\"" +
-        s": '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}${classifier}',\n"
-    }
-    Files.write(librariesGradle,
-      (libraries + "]\n").getBytes,
-      StandardOpenOption.TRUNCATE_EXISTING,
-      StandardOpenOption.CREATE)
-  }
-
-
-  def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val prjNameMapping = ProjectMapping.projectNamesMapping()
-    val copies = GradleCopy.all.vector().map { c =>
-      val prjPath = c.destination.split("/").toList
-      val fixedDestination = (prjNameMapping(prjPath.head) :: prjPath.tail).mkString("/")
-      val fixedDestination2 = if (fixedDestination.endsWith("AdScoringInfoPerseus.java"))
-                                 fixedDestination.replace("src/main/java/", "src/main/scala/")
-                              else
-                                 fixedDestination
-      c.copy(destination = fixedDestination2)
-    }.toSet
-    throw new RuntimeException("FileCopier needs to be updated to Convert.copyFiles or Copy.copy")
-//    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
-//    fileCopier.copyAll()
-  }
-
-
   def sourceCompatibility(javaVersion: Option[String]): String =
     "sourceCompatibility = " + javaVersion.getOrElse("1.7")
 
@@ -364,5 +310,58 @@ object GradleConvert extends Logger {
             StandardOpenOption.TRUNCATE_EXISTING,
             StandardOpenOption.CREATE)
     }
+  }
+
+  def loadResource(path: String): String = {
+    val source = io.Source.fromInputStream(getClass.getResourceAsStream(path))
+    try source.mkString
+    finally source.close()
+  }
+
+  def rootBuildFiles(moolRoot: Path)(implicit connection: Connection) = {
+    val prjNameMapping = ProjectMapping.projectNamesMapping().map(_.swap)
+
+    val settingsGradle = moolRoot.resolve("settings.gradle")
+    val settings = prjNameMapping.toList.sorted.foldLeft("") { (buffer, prjNames) =>
+      val prjName = prjNames._1.replaceAll("/", "-")
+      val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
+      buffer + s"include ':${prjName}'$comment\n"
+    }
+
+    Files.write(settingsGradle,
+      (settings + loadResource("settings_end.gradle")).getBytes,
+      StandardOpenOption.TRUNCATE_EXISTING,
+      StandardOpenOption.CREATE)
+
+    val librariesGradle = moolRoot.resolve("gradle/libraries.gradle")
+    val libraries = Library.list.vector().filter { lib =>
+      lib.isMavenDep
+    }.sorted.foldLeft("ext.libraries = [\n") { (buffer, lib) =>
+      // TODO handle scala version
+      val classifier = ":" + lib.classifier.getOrElse("")
+      buffer + "  \"" + Library.libReference(lib.path) + "\"" +
+        s": '${lib.group_id.get}:${lib.artifact_id.get}:${lib.version.get}${classifier}',\n"
+    }
+    Files.write(librariesGradle,
+      (libraries + "]\n").getBytes,
+      StandardOpenOption.TRUNCATE_EXISTING,
+      StandardOpenOption.CREATE)
+  }
+
+
+  def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
+    val prjNameMapping = ProjectMapping.projectNamesMapping()
+    val copies = GradleCopy.all.vector().map { c =>
+      val prjPath = c.destination.split("/").toList
+      val fixedDestination = (prjNameMapping(prjPath.head) :: prjPath.tail).mkString("/")
+      val fixedDestination2 = if (fixedDestination.endsWith("AdScoringInfoPerseus.java"))
+        fixedDestination.replace("src/main/java/", "src/main/scala/")
+      else
+        fixedDestination
+      c.copy(destination = fixedDestination2)
+    }.toSet
+    throw new RuntimeException("FileCopier needs to be updated to Convert.copyFiles or Copy.copy")
+    //    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
+    //    fileCopier.copyAll()
   }
 }
