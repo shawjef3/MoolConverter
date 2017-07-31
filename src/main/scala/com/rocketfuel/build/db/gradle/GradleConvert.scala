@@ -50,6 +50,7 @@ class GradleConvert(projectRoot: Path, modulePaths: Map[Int, String], moduleOutp
     """
       |test {
       |  useTestNG() {
+      |    environment 'BUILD_ROOT', "${rootProject.projectDir}/projects/testdata"
       |    includeGroups """.stripMargin
   private val testNGConfigSnippetWithGroupsPost =
     """
@@ -86,6 +87,7 @@ class GradleConvert(projectRoot: Path, modulePaths: Map[Int, String], moduleOutp
     """
       |test {
       |    maxParallelForks = 1
+      |    environment 'BUILD_ROOT', "${rootProject.projectDir}/projects/testdata"
       |}
     """.stripMargin
   private val scala210Tasks = "rootProject.tasks.build210.dependsOn tasks.build\n"
