@@ -27,11 +27,6 @@ object Deploy extends Deployable {
       mvn.DependencySupplements +
       mvn.Dependency +
       mvn.Exclusion +
-      gradle.BuildTree +
-      gradle.ProjectMapping +
-      gradle.GradleCopy +
-      gradle.Dependency +
-      gradle.Library +
       gradle.IgnoredBlds
 
   override def deploy()(implicit connection: Connection): Unit =

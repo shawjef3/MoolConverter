@@ -21,11 +21,8 @@ object MainGradleConvert extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-//    GradleConvert.files(moolRoot, destinationRoot)
-//    GradleConvert.rootBuildFiles(moolRoot)
-//    GradleConvert.builds(moolRoot, destinationRoot)
     Convert.files(moolRoot, destinationRoot.resolve("projects"))
-//    SimpleGradleConvert.rootBuildFiles(moolRoot)
+
     SimpleGradleConvert.builds(moolRoot, destinationRoot)
   }
 
