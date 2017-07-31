@@ -11,7 +11,5 @@ SELECT
       '/',
       NULL
   ) AS path
-FROM (Select b.id, case when j.path is not null then j.path else b.path end as path
-      from mool_dedup.blds b
-        left outer join gradle.bld_joins j on j.added_id = b.id
-      WHERE group_id IS NULL) blds
+FROM mool_dedup.blds
+WHERE group_id IS NULL
