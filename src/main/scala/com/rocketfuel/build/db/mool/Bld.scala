@@ -95,6 +95,10 @@ case class Bld(
     </project>
   }
 
+  def gradle(): String = {
+
+  }
+
 }
 
 object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bld] with SelectByPath[Bld] {

@@ -5,9 +5,7 @@ import com.rocketfuel.sdbc.PostgreSql._
 import com.zaxxer.hikari.HikariConfig
 import java.nio.file._
 
-object MainPoms extends App {
-
-  val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
+object MainBuildFiles extends App {
 
   val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
 
@@ -19,7 +17,7 @@ object MainPoms extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-    Convert.poms(destinationRoot)
+    Convert.buildFiles(destinationRoot)
   }
 
   Parents.writeRoot(destinationRoot)

@@ -54,7 +54,30 @@ object Convert {
     linkTestData(destinationRoot)
   }
 
-  def poms(destinationRoot: Path)(implicit connection: Connection): Unit = {
+  def parentPoms(
+    destinationRoot: Path,
+    localBlds: Vector[mool.Bld],
+    modulePaths: Map[Int, String]
+  ): Unit = {
+    Parents.writeRoot(destinationRoot)
+    Parents.writeCheckStyle(destinationRoot)
+    Parents.`Scala-common`.write(destinationRoot, Set())
+
+    val parentPoms =
+      localBlds.foldLeft(Parents.Poms.Empty) {
+        case (poms, bld) =>
+          val moduleRoot = modulePaths(bld.id)
+          poms.add(bld, moduleRoot)
+      }
+
+    parentPoms.write(destinationRoot)
+  }
+
+  def parentGradles(destinationRoot: Path): Unit = {
+
+  }
+
+  def buildFiles(destinationRoot: Path)(implicit connection: Connection): Unit = {
 
     val modulePaths = {
       for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
@@ -80,25 +103,21 @@ object Convert {
 
       val path = modulePaths(bld.id)
       val modulePath = destinationRoot.resolve(path)
+
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath, exclusions)
       val pomPath = modulePath.resolve("pom.xml")
 
+      val gradle = bld.gradle()
+      val gradlePath = modulePath.resolve("settings.gradle")
+
       Files.createDirectories(modulePath)
       Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+      Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 
-    Parents.writeRoot(destinationRoot)
-    Parents.writeCheckStyle(destinationRoot)
-    Parents.`Scala-common`.write(destinationRoot, Set())
+    parentPoms(destinationRoot, localBlds, modulePaths)
 
-    val parentPoms =
-      localBlds.foldLeft(Parents.Poms.Empty) {
-        case (poms, bld) =>
-          val moduleRoot = modulePaths(bld.id)
-          poms.add(bld, moduleRoot)
-      }
-
-    parentPoms.write(destinationRoot)
+    parentGradles(destinationRoot)
   }
 
 }
