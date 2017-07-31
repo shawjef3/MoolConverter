@@ -45,7 +45,9 @@ object Convert {
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val copies = Copy.all.vector().toSet
     Copy.copy(copies, moolRoot, destinationRoot)
+  }
 
+  def testFiles(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     //copy testdata
     val testData = moolRoot.resolve("java/com/rocketfuel/modeling/athena/testdata")
     val testDataDestination = destinationRoot.resolve("testdata/java/com/rocketfuel/modeling/athena/testdata")

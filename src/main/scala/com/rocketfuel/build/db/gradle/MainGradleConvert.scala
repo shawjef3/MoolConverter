@@ -21,7 +21,8 @@ object MainGradleConvert extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-    Convert.files(moolRoot, destinationRoot.resolve("projects"))
+    SimpleGradleConvert.files(moolRoot, destinationRoot.resolve("projects"))
+    Convert.testFiles(moolRoot, destinationRoot.resolve("projects"))
 
     SimpleGradleConvert.builds(moolRoot, destinationRoot)
   }

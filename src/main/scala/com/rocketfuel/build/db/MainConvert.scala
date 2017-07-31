@@ -19,6 +19,7 @@ object MainConvert extends App {
 
   pool.withConnection { implicit connection =>
     Convert.files(moolRoot, destinationRoot)
+    Convert.testFiles(moolRoot, destinationRoot)
 
     Convert.poms(destinationRoot)
   }

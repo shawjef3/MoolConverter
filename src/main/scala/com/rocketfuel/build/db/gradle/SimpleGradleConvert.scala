@@ -106,10 +106,11 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
   }
 
 }
+
 object SimpleGradleConvert extends Logger {
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val copies = Copy.all.vector().toSet
+    val copies = GradleCopy.all.vector().map(GradleCopy.toCopy(_)).toSet
     Copy.copy(copies, moolRoot, destinationRoot)
   }
 
@@ -138,6 +139,13 @@ object SimpleGradleConvert extends Logger {
       com.rocketfuel.build.db.mvn.Dependency.list.vector().groupBy(_.sourceId)
 
     val localBlds = Bld.locals.vector()
+    for (bld <- localBlds) {
+      val mPath = Projects.pathToModulePath(bld.path)
+      val origPath = modulePaths(bld.id)
+      if (mPath != origPath) {
+        logger.warn(s"Wrong mapping: Old: ${origPath} New: ${mPath}")
+      }
+    }
 
     var includedBuilds = List[(String, Seq[String])]()
     val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
