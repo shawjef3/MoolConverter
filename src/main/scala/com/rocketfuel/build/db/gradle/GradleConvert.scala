@@ -8,11 +8,6 @@ import com.rocketfuel.build.db.mvn.{Dependency => MvnDependency}
 import com.rocketfuel.build.db.mvn._
 import com.rocketfuel.sdbc.PostgreSql._
 
-/*
-TODO: fix extra projects generated from ProjectMappings with no sources
-TODO: check if there are copied sources not mapped into build
- */
-
 case class BuildGradleParts(compileOnlyDeps: Set[String] = Set.empty,
                             compileDeps: Set[String] = Set.empty,
                             compileTestDeps: Set[String] = Set.empty,
@@ -99,14 +94,14 @@ class GradleConvert(projectRoot: Path, modulePaths: Map[Int, String], moduleOutp
   def sourceCompatibility(javaVersion: Option[String]): String =
     "sourceCompatibility = " + javaVersion.getOrElse("1.7")
 
-  private def gradleForBld(prjBld: Bld, dependencies: Vector[MvnDependency], moduleRoot: Path) = {
-    lazy val dependencyList = dependencies.foldLeft(List[String]()) { case (depList, dep) =>
+  private def gradleForBld(path: String, prjBld: Bld, dependencies: Vector[MvnDependency], moduleRoot: Path) = {
+    def dependencyList(isTest: Boolean) = dependencies.foldLeft(List[String]()) { case (depList, dep) =>
       moduleOutputs.get(dep.gradleDefinition).flatMap(modulePaths.get(_)) match {
         case Some(depPath) =>
           val configuration = dep.scope match {
             case "provided" => "compileOnly"
             case "test" => "testCompile"
-            case _ => "compile"
+            case _ => if (isTest) "testCompile" else "compile"
           }
           val projectOutputs = dep.`type` match {
             case Some("test-jar") => List(
@@ -117,65 +112,73 @@ class GradleConvert(projectRoot: Path, modulePaths: Map[Int, String], moduleOutp
           }
           depList ++ projectOutputs.map(output => s"  ${configuration} ${output}")
         case _ =>
-          depList ++ List(dep.gradleDependency)
+          depList ++ List(dep.gradleDependency).map { d =>
+            if (isTest) d.replace(" compile ", " testCompile ")
+            else d
+          }
       }
+    }.filterNot { testDep =>
+      if (testDep.contains("':" + path + "'")) {
+        logger.info(s"eliminate test dependency on main source in ${path}")
+      }
+      testDep.contains("':" + path + "'")
     }.toSet
 
     val buildGradleParts = {
       prjBld.ruleType match {
         case "java_proto_lib" =>
-          BuildGradleParts(compileDeps = Set(protoLib) ++ dependencyList,
+          BuildGradleParts(compileDeps = Set(protoLib) ++ dependencyList(false),
             plugins = Set("plugin: 'java'", "plugin: 'com.google.protobuf'"),
             snippets = Set(protoConfigSnippet))
         case "java_lib" | "file_coll" =>
-          BuildGradleParts(compileDeps = dependencyList,
+          BuildGradleParts(compileDeps = dependencyList(false),
             plugins = Set("plugin: 'java'"),
             snippets = Set(sourceCompatibility(prjBld.javaVersion)))
         case "java_bin" =>
-          BuildGradleParts(compileDeps = dependencyList,
+          BuildGradleParts(compileDeps = dependencyList(false),
             plugins = Set("plugin: 'java'", "plugin: 'com.github.johnrengelman.shadow'"),
             snippets = shadowJarConfig(prjBld.mainClass).toSet + sourceCompatibility(prjBld.javaVersion))
         case "java_test" =>
           // 'from: "${' will be interpolated by Gradle
           BuildGradleParts(plugins = Set("plugin: 'java'", "from: \"${rootProject.projectDir}/gradle/tests.gradle\""),
             snippets = Set(testNGConfig(prjBld.testGroups)) + sourceCompatibility(prjBld.javaVersion),
-            compileDeps = dependencyList)
+            compileDeps = dependencyList(true))
         case "java_thrift_lib" =>
           BuildGradleParts(plugins = Set("plugin: 'java'", "plugin: 'org.jruyi.thrift'"),
             snippets = Set(thriftConfigSnippet) + sourceCompatibility(prjBld.javaVersion),
-            compileDeps = Set(thriftLib) ++ dependencyList)
+            compileDeps = Set(thriftLib) ++ dependencyList(false))
         case "scala_lib" =>
           val compileDeps = prjBld.scalaVersion match {
-            case Some("2.10") => scala210Libs.toSet ++ dependencyList
-            case Some("2.11") => scala211Libs.toSet ++ dependencyList
-            case Some("2.12") => dependencyList // TODO should have 2.12 libs
+            case Some("2.10") => scala210Libs.toSet ++ dependencyList(false)
+            case Some("2.11") => scala211Libs.toSet ++ dependencyList(false)
+            case Some("2.12") => dependencyList(false) // TODO should have 2.12 libs
             case _ =>
               logger.warn(s"scala_lib with unknown version ${prjBld}")
-              dependencyList
+              dependencyList(false)
           }
           BuildGradleParts(compileDeps = compileDeps,
             plugins = Set("plugin: 'scala'"),
             snippets = Set(sourceCompatibility(prjBld.javaVersion)))
         case "scala_test" =>
           val compileDeps = prjBld.scalaVersion match {
-            case Some("2.10") => scala210Libs.toSet ++ dependencyList + scalatestLibs
-            case Some("2.11") => scala211Libs.toSet ++ dependencyList + scalatestLibs
-            case Some("2.12") => dependencyList + scalatestLibs // TODO should have 2.12 libs
+            case Some("2.10") => scala210Libs.toSet ++ dependencyList(true) + scalatestLibs
+            case Some("2.11") => scala211Libs.toSet ++ dependencyList(true) + scalatestLibs
+            case Some("2.12") => dependencyList(true) + scalatestLibs // TODO should have 2.12 libs
             case _ =>
               logger.warn(s"scala_test with unknown version ${prjBld}")
-              dependencyList.toSet + scalatestLibs
+              dependencyList(true).toSet + scalatestLibs
           }
           BuildGradleParts(compileDeps = compileDeps,
             plugins = Set("plugin: 'scala'", "plugin: 'com.github.maiflai.scalatest'"),
             snippets = Set(sourceCompatibility(prjBld.javaVersion), scalatestSnippet))
         case "scala_bin" =>
           val compileDeps = prjBld.scalaVersion match {
-            case Some("2.10") => scala210Libs.toSet ++ dependencyList
-            case Some("2.11") => scala211Libs.toSet ++ dependencyList
-            case Some("2.12") => dependencyList // TODO should have 2.12 libs
+            case Some("2.10") => scala210Libs.toSet ++ dependencyList(false)
+            case Some("2.11") => scala211Libs.toSet ++ dependencyList(false)
+            case Some("2.12") => dependencyList(false) // TODO should have 2.12 libs
             case _ =>
               logger.warn(s"scala_lib with unknown version ${prjBld}")
-              dependencyList
+              dependencyList(false)
           }
           BuildGradleParts(compileDeps = compileDeps,
             plugins = Set("plugin: 'scala'", "plugin: 'com.github.johnrengelman.shadow'"),
@@ -187,26 +190,14 @@ class GradleConvert(projectRoot: Path, modulePaths: Map[Int, String], moduleOutp
     buildGradleParts
   }
 
-  def gradle(path: String, prjBld: Bld, extraBlds: Map[Bld, Vector[MvnDependency]],
-             dependencies: Vector[MvnDependency], moduleRoot: Path) = {
-    if (!extraBlds.isEmpty) {
-      logger.info(s"prj ${moduleRoot} should merge with ${extraBlds}")
-    }
-    val buildGradleParts = extraBlds.foldLeft(gradleForBld(prjBld, dependencies, moduleRoot)) { (buildParts, extraBld) =>
-      val extraBuildParts = gradleForBld(extraBld._1, extraBld._2, moduleRoot)
-      // TODO merge those two
-      val updatedExtraDeps = extraBuildParts.compileDeps.filterNot { testDep =>
-        if (testDep.contains("':" + path + "'")) {
-          logger.info(s"eliminate test dependency on main source in ${path}")
-        }
-        buildParts.compileDeps.contains(testDep) || testDep.contains("':" + path + "'")
-      }.map { testDep =>
-        testDep.replace("  compile ", "  testCompile ")
-      }
+  def gradle(path: String, bldWithDeps: Map[Bld, Vector[MvnDependency]],
+             moduleRoot: Path) = {
+    val buildGradleParts = bldWithDeps.map { case (bld, deps) => gradleForBld(path, bld, deps, moduleRoot) }
+      .reduceLeft { (buildParts1, buildParts2) =>
       BuildGradleParts(
-        compileDeps = buildParts.compileDeps ++ updatedExtraDeps,
-        snippets = buildParts.snippets ++ extraBuildParts.snippets,
-        plugins = buildParts.plugins ++ extraBuildParts.plugins
+        compileDeps = buildParts1.compileDeps ++ buildParts2.compileDeps,
+        snippets = buildParts1.snippets ++ buildParts2.snippets,
+        plugins = buildParts1.plugins ++ buildParts2.plugins
       )
     }
 

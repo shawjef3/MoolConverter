@@ -2,7 +2,7 @@
 rootProject.name = 'vostok'
 rootProject.children.each {project ->
     // String fileBaseName = project.name.replaceAll("\\p{Upper}") { "-${it.toLowerCase()}" }
-    String fileBaseName = project.name.replaceAll("-") { "/" }
+    String fileBaseName = project.name
     String projectDirName = "projects/${fileBaseName}"
     project.projectDir = new File(settingsDir, projectDirName)
     if (!project.projectDir.isDirectory()) logger.warn("Missing project directory ${project.projectDir}")

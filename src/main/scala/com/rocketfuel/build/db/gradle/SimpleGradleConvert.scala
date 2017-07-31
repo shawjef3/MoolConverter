@@ -117,18 +117,6 @@ object SimpleGradleConvert extends Logger {
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val projectsRoot = destinationRoot.resolve("projects")
 
-    val modulePaths = {
-      for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
-        id -> path.replaceAll("/", "-")
-    }.toMap
-
-    val prjRemapping: Map[Int, Int] = {
-      for (i <- BldJoins.list.iterator()) yield {
-        i.addedId -> i.id
-      }
-    }.toMap
-    val additionalBlds = prjRemapping.groupBy(_._2).mapValues(_.keys)
-
     val identifiers = {
       for (i <- Identifier.list.iterator()) yield {
         i.bldId -> i
@@ -139,13 +127,10 @@ object SimpleGradleConvert extends Logger {
       com.rocketfuel.build.db.mvn.Dependency.list.vector().groupBy(_.sourceId)
 
     val localBlds = Bld.locals.vector()
-    for (bld <- localBlds) {
-      val mPath = Projects.pathToModulePath(bld.path)
-      val origPath = modulePaths(bld.id)
-      if (mPath != origPath) {
-        logger.warn(s"Wrong mapping: Old: ${origPath} New: ${mPath}")
-      }
+    val modulePaths = localBlds.foldLeft(Map.empty[Int,String]) { case (m, bld) =>
+        m + (bld.id -> Projects.pathToModulePath(bld.path))
     }
+    val moduleBlds = localBlds.groupBy { bld => Projects.pathToModulePath(bld.path) }
 
     var includedBuilds = List[(String, Seq[String])]()
     val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
@@ -153,26 +138,17 @@ object SimpleGradleConvert extends Logger {
       val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
       moduleOuts + (output -> bld.id)
     }
-    val localMergedBlds = localBlds.filter { bld => !prjRemapping.contains(bld.id)}
     val prjFilter = new SmallProjectFilter(modulePaths)
     val convertor = new GradleConvert(projectsRoot, modulePaths, moduleOutputs)
-    // for (bld <- localMergedBlds /*.filter(prjFilter.filterProject(_))*/) {
-    for (bld <- localMergedBlds.filter(prjFilter.filterProject(_))) {
-      val path = modulePaths(bld.id)
-      if (additionalBlds.contains(bld.id)) {
-        logger.info(s"prj ${path} should merge with ${additionalBlds(bld.id)}")
-      }
-      val bldDependencies = dependencies.getOrElse(bld.id, Vector.empty)
-      // pass extra builds with deps
-      val extraBlds = additionalBlds.getOrElse(bld.id, Set.empty[Int])
-        .map(Bld.selectById(_))
-        .flatten
-        .map { extraBld => (extraBld, dependencies.getOrElse(extraBld.id, Vector.empty))}
+    // for (bld <- localBlds /*.filter(prjFilter.filterProject(_))*/) {
+    for ((path, blds) <- moduleBlds) {
+      val bldsWithDeps = blds
+        .map { bld => (bld, dependencies.getOrElse(bld.id, Vector.empty))}
         .toMap
 
-      includedBuilds = (path, bld.path) :: includedBuilds
-      val modulePath = projectsRoot.resolve(path.replaceAll("-", "/"))
-      val gradle = convertor.gradle(path, bld, extraBlds, bldDependencies, modulePath)
+      includedBuilds = (path, blds.map(_.path.mkString("-"))) :: includedBuilds
+      val modulePath = projectsRoot.resolve(path)
+      val gradle = convertor.gradle(path, bldsWithDeps, modulePath)
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)
