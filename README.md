@@ -1,7 +1,7 @@
 Run
 ===
 
-Set up a local PostgreSQL instance. For MacOS, an easy way is to use <http://postgresapp.com/>. Connect to it and run,
+Set up a local PostgreSQL instance. For MacOS, an easy way is to use <http://postgresapp.com/>. Use it to initialize and start a new instance. Double click on one of the running databases to connect to it, and run,
 
 ```postgresql
 CREATE DATABASE mool_conversion;
