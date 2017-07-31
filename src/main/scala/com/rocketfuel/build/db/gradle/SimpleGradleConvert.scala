@@ -9,7 +9,7 @@ import com.rocketfuel.build.db.mool.Bld
 import com.rocketfuel.sdbc.PostgreSql._
 
 // Filter a very small subset of project to test IDE integration quickly
-class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, String]) {
+class SmallProjectFilter(modulePaths: Map[Int, String]) {
 
   private val quasarDeps =
     """3rd_party-java-com-google-protobuf-ZeroCopyByteString
@@ -89,26 +89,20 @@ class SmallProjectFilter(modulePaths: Map[Int, String], ignoredBlds: Map[Int, St
       |grid-common-spark-SparkCore2_0
     """.stripMargin.split("\n").toSet
   def filterProject(bld: Bld): Boolean = {
-    if (ignoredBlds.contains(bld.id)) {
-      SimpleGradleConvert.logger.trace(s"ignore bld ${bld.path}")
-      false
-    }
-    else {
-      val path = modulePaths(bld.id)
-      if (path.startsWith("server-util-") ||
-        path.startsWith("common-message-") ||
-        path.startsWith("grid-quasar-") ||
-        path.startsWith("grid-common-spark-Spark") ||
+    val path = modulePaths(bld.id)
+    if (path.startsWith("server-util-") ||
+      path.startsWith("common-message-") ||
+      path.startsWith("grid-quasar-") ||
+      path.startsWith("grid-common-spark-Spark") ||
 
-        path == "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto" ||
-        path == "server-geoip-TimeZone" ||
-        path == "3rd_party-java-mvn-org-apache-hadoop-HadoopAll2" ||
-        path == "3rd_party-java-mvn-org-ostermiller-Utils" ||
-        quasarDeps.contains(path))
-        true
-      else
-        false
-    }
+      path == "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto" ||
+      path == "server-geoip-TimeZone" ||
+      path == "3rd_party-java-mvn-org-apache-hadoop-HadoopAll2" ||
+      path == "3rd_party-java-mvn-org-ostermiller-Utils" ||
+      quasarDeps.contains(path))
+      true
+    else
+      false
   }
 
 }
@@ -121,11 +115,6 @@ object SimpleGradleConvert extends Logger {
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
     val projectsRoot = destinationRoot.resolve("projects")
-
-    val ignoredProjects = {
-      for (ignore <- IgnoredBlds.list.iterator())
-      yield ignore.id -> ignore.path
-    }.toMap
 
     val modulePaths = {
       for (ModulePath(id, path) <- ModulePath.list.iterator()) yield
@@ -157,7 +146,7 @@ object SimpleGradleConvert extends Logger {
       moduleOuts + (output -> bld.id)
     }
     val localMergedBlds = localBlds.filter { bld => !prjRemapping.contains(bld.id)}
-    val prjFilter = new SmallProjectFilter(modulePaths, ignoredProjects)
+    val prjFilter = new SmallProjectFilter(modulePaths)
     val convertor = new GradleConvert(projectsRoot, modulePaths, moduleOutputs)
     // for (bld <- localMergedBlds /*.filter(prjFilter.filterProject(_))*/) {
     for (bld <- localMergedBlds.filter(prjFilter.filterProject(_))) {
