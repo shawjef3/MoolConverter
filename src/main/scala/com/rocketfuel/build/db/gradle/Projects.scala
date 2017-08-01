@@ -8,6 +8,20 @@ object Projects {
     else if (path.take(3) == Seq("clojure", "com", "rocketfuel")) "clojure" +: path.drop(3)
     else if (path.head == "java") "3rd_party" +: path
     else path
-    patchedPath.mkString("-")
+
+    stripSuffices(patchedPath.mkString("-"))
+  }
+
+  private def stripSuffices(s: String) : String = {
+    val short = s.stripSuffix("Test")
+      .stripSuffix("Pkg")
+      .stripSuffix("NoDeps")
+      // .stripSuffix("Lib")
+      .stripSuffix("_bin")
+      .stripSuffix("_test")
+      .stripSuffix("_lib")
+    if (s.endsWith("-ModulesTest") || // circular dep m/a/core/modules/Modules m/a/core/workflow/WorkFlow
+      short.isEmpty) s
+    else short
   }
 }
