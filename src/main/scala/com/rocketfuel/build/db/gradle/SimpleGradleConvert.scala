@@ -39,6 +39,7 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
       |grid-luke-service-client-LookupClient
       |grid-luke-service-client-LookupClientNoConf
       |grid-luke-service-client-LookupRpcClient
+      |grid-luke-service-core-Client
       |grid-luke-service-core-ClientTest
       |grid-luke-service-core-L1Server
       |grid-luke-service-core-L2Server
@@ -88,11 +89,11 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
       |grid-common-spark-SparkCatalyst2_0
       |grid-common-spark-SparkCore2_0
     """.stripMargin.split("\n").toSet
-  def filterProject(bld: Bld): Boolean = {
-    val path = modulePaths(bld.id)
-    if (path.startsWith("server-util-") ||
-      path.startsWith("common-message-") ||
-      path.startsWith("grid-quasar-") ||
+
+  def filterProject(path: String): Boolean = {
+    if (path.startsWith("server-util") ||
+      path.startsWith("common-message") ||
+      path.startsWith("grid-quasar") ||
       path.startsWith("grid-common-spark-Spark") ||
 
       path == "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto" ||
@@ -140,8 +141,8 @@ object SimpleGradleConvert extends Logger {
     }
     val prjFilter = new SmallProjectFilter(modulePaths)
     val convertor = new GradleConvert(projectsRoot, modulePaths, moduleOutputs)
-    // for (bld <- localBlds /*.filter(prjFilter.filterProject(_))*/) {
-    for ((path, blds) <- moduleBlds) {
+    // for ((path, blds) <- moduleBlds) {
+    for ((path, blds) <- moduleBlds.filter { case (path, bld) => prjFilter.filterProject(path) }) {
       val bldsWithDeps = blds
         .map { bld => (bld, dependencies.getOrElse(bld.id, Vector.empty))}
         .toMap
