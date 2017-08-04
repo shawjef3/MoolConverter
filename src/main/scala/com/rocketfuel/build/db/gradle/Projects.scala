@@ -6,12 +6,19 @@ case class BldGrouping(sharedPrefix: String,
 
 object Projects {
 
-  private val bldGroupings = Set(
+  private val bldGroupings = Seq(
+    BldGrouping(sharedPrefix = "camus-api"),
+    BldGrouping(sharedPrefix = "camus-coders"),
+    BldGrouping(sharedPrefix = "camus-etl-mapred-support"),
+    BldGrouping(sharedPrefix = "camus-etl"),
+    BldGrouping(sharedPrefix = "camus-schemaregistry"),
+//    BldGrouping(sharedPrefix = "camus"),
     // merge all common protobufs
     // temporarily split aerospike_data_message & page_context
     BldGrouping(sharedPrefix = "common-message", excludes = Set("common-message-protobuf-AerospikeDataMessageProto")),
     BldGrouping(sharedPrefix = "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto",
       gradleProjectName = Some("common-message")),
+
     // create one project for server.util, the only external dependency is server.geoip.TimeZone
     BldGrouping(sharedPrefix = "server-util"),
     BldGrouping(sharedPrefix = "server-geoip-TimeZone"),
@@ -27,11 +34,12 @@ object Projects {
     else if (path.head == "java") "3rd_party" +: path
     else path
 
-    val remappedPath = bldGroupings.foldLeft(patchedPath.mkString("-")) { (path, bldGrouping) =>
-      if (path.startsWith(bldGrouping.sharedPrefix) && !bldGrouping.excludes.contains(path))
-        bldGrouping.gradleProjectName.getOrElse(bldGrouping.sharedPrefix)
-      else path
-    }
+    val defaultPath = patchedPath.mkString("-")
+    val remappedPath = bldGroupings.find { bldGroup =>
+      defaultPath.startsWith(bldGroup.sharedPrefix) && !bldGroup.excludes.contains(defaultPath)
+    }.map { bldGroup => bldGroup.gradleProjectName.getOrElse(bldGroup.sharedPrefix)
+    }.getOrElse(defaultPath)
+
     stripSuffices(remappedPath)
   }
 

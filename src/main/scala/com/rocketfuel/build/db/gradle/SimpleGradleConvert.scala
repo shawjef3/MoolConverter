@@ -93,6 +93,7 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
   def filterProject(path: String): Boolean = {
     if (path.startsWith("server-util") ||
       path.startsWith("server-geoip") ||
+      path.startsWith("camus") ||
       path.startsWith("common-message") ||
       path.startsWith("grid-quasar") ||
       path.startsWith("grid-common-spark-Spark") ||
