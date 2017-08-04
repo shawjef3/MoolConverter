@@ -92,12 +92,12 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
 
   def filterProject(path: String): Boolean = {
     if (path.startsWith("server-util") ||
+      path.startsWith("server-geoip") ||
       path.startsWith("common-message") ||
       path.startsWith("grid-quasar") ||
       path.startsWith("grid-common-spark-Spark") ||
 
       path == "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto" ||
-      path == "server-geoip-TimeZone" ||
       path == "3rd_party-java-mvn-org-apache-hadoop-HadoopAll2" ||
       path == "3rd_party-java-mvn-org-ostermiller-Utils" ||
       quasarDeps.contains(path))

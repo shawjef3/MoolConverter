@@ -1,25 +1,25 @@
 package com.rocketfuel.build.db.gradle
 
 case class BldGrouping(sharedPrefix: String,
-                       excludes: Set[String],
-                       gradleProjectName: String)
+                       excludes: Set[String] = Set.empty,
+                       gradleProjectName: Option[String] = None)
 
 object Projects {
 
-  val bldGroupings = Set(
+  private val bldGroupings = Set(
     // merge all common protobufs
     // temporarily split aerospike_data_message & page_context
-    BldGrouping(sharedPrefix = "common-message", excludes = Set("common-message-protobuf-AerospikeDataMessageProto"),
-      gradleProjectName = "common-message"),
+    BldGrouping(sharedPrefix = "common-message", excludes = Set("common-message-protobuf-AerospikeDataMessageProto")),
+    BldGrouping(sharedPrefix = "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto",
+      gradleProjectName = Some("common-message")),
     // create one project for server.util, the only external dependency is server.geoip.TimeZone
-    BldGrouping(sharedPrefix = "server-util", excludes = Set.empty,
-      gradleProjectName = "server-util"),
-    BldGrouping(sharedPrefix = "server-geoip-TimeZone", excludes = Set.empty,
-      gradleProjectName = "server-util"),
+    BldGrouping(sharedPrefix = "server-util"),
+    BldGrouping(sharedPrefix = "server-geoip-TimeZone"),
 
-    BldGrouping(sharedPrefix = "grid-quasar", excludes = Set.empty,
-      gradleProjectName = "grid-quasar")
+    BldGrouping(sharedPrefix = "server-geoip"),
+    BldGrouping(sharedPrefix = "grid-quasar")
   )
+
   def pathToModulePath(path: Seq[String]): String = {
     val patchedPath = if (path.head == "grid") "grid2" +: path.drop(1)
     else if (path.take(3) == Seq("java", "com", "rocketfuel")) path.drop(3)
@@ -28,10 +28,11 @@ object Projects {
     else path
 
     val remappedPath = bldGroupings.foldLeft(patchedPath.mkString("-")) { (path, bldGrouping) =>
-      if (path.startsWith(bldGrouping.sharedPrefix) && bldGrouping.excludes.contains(path)) bldGrouping.gradleProjectName
+      if (path.startsWith(bldGrouping.sharedPrefix) && !bldGrouping.excludes.contains(path))
+        bldGrouping.gradleProjectName.getOrElse(bldGrouping.sharedPrefix)
       else path
     }
-    stripSuffices(stripSuffices(remappedPath))
+    stripSuffices(remappedPath)
   }
 
   private def stripSuffices(s: String) : String = {
