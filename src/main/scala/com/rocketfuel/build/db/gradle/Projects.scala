@@ -19,9 +19,14 @@ object Projects {
     BldGrouping(sharedPrefix = "grid-scrubplus-logformat-generated-hive_proto-EvfColumnsProto",
       gradleProjectName = Some("common-message")),
 
+    BldGrouping(sharedPrefix = "ei-common-Cache"),
+    BldGrouping(sharedPrefix = "ei-common-LruCacheTest", gradleProjectName = Some("ei-common-Cache")),
+    BldGrouping(sharedPrefix = "ei-common-RpcClient"),
+    BldGrouping(sharedPrefix = "ei-common-RpcServer"),
+
     // create one project for server.util, the only external dependency is server.geoip.TimeZone
     BldGrouping(sharedPrefix = "server-util"),
-    BldGrouping(sharedPrefix = "server-geoip-TimeZone"),
+    BldGrouping(sharedPrefix = "server-geoip-TimeZone", gradleProjectName = Some("server-util")),
 
     BldGrouping(sharedPrefix = "server-geoip"),
     BldGrouping(sharedPrefix = "grid-quasar")
@@ -45,6 +50,7 @@ object Projects {
 
   private def stripSuffices(s: String) : String = {
     val short = s.stripSuffix("Test")
+      .stripSuffix("Tests")
       .stripSuffix("Pkg")
       .stripSuffix("NoDeps")
       // .stripSuffix("Lib")

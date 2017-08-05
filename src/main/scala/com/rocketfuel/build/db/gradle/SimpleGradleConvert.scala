@@ -22,6 +22,7 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
       |3rd_party-java-mvn-redis-clients-JedisAll
       |common-rpcutils-DuplexProtocolJavaProto
       |common-rpcutils-EmptyJavaProto
+      |common-rpcutils-RpcTestJavaProto
       |dp-luke-LookupJavaProtos
       |dp-luke-PageJavaProtos
       |ei-common-Cache
@@ -30,6 +31,7 @@ class SmallProjectFilter(modulePaths: Map[Int, String]) {
       |grid-common-metrics-collectors-MetricsCollector
       |grid-common-metrics-reporters-AllReporters
       |grid-common-spark-SparkCommon
+      |grid-common-testutils-TestLog4jAppendConsole
       |grid-common-utils-FileSystemUtil
       |grid-dmp-ssvadapter-utils-HdfsUtilsLib
       |grid-luke-service-api-ServiceApi
