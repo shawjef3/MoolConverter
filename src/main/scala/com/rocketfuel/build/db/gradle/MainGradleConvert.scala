@@ -28,6 +28,4 @@ object MainGradleConvert extends App {
     SimpleGradleConvert.builds(moolRoot, destinationRoot)
   }
 
-  Convert.gridModeling(destinationRoot)
-
 }

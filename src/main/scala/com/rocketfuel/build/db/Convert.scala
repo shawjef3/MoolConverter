@@ -1,7 +1,7 @@
 package com.rocketfuel.build.db
 
 import java.nio.file._
-import com.rocketfuel.build.db.mvn.{Copy, ModulePath, Parents}
+import com.rocketfuel.build.db.mvn.{Copy, Identifier, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
 object Convert {
@@ -107,8 +107,14 @@ object Convert {
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath, exclusions)
       val pomPath = modulePath.resolve("pom.xml")
 
-      val gradle = bld.gradle()
-      val gradlePath = modulePath.resolve("settings.gradle")
+      val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
+        val identifier = identifiers(bld.id)
+        val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
+        moduleOuts + (output -> bld.id)
+      }
+
+      val gradle = bld.gradle(identifier, bldDependencies, destinationRoot, modulePath, modulePaths, moduleOutputs)
+      val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)
       Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)

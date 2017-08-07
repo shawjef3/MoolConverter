@@ -100,8 +100,7 @@ object GradleConvert extends Logger {
                                  fixedDestination
       c.copy(destination = fixedDestination2)
     }.toSet
-    val fileCopier = FileCopier(copies, moolRoot, destinationRoot)
-    fileCopier.copyAll()
+    Copy.copy(copies, moolRoot, destinationRoot)
   }
 
 
