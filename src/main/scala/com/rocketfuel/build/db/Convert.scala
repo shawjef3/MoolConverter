@@ -104,6 +104,8 @@ object Convert {
       val path = modulePaths(bld.id)
       val modulePath = destinationRoot.resolve(path)
 
+      Files.createDirectories(modulePath)
+
       //maven part
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath, exclusions)
       val pomPath = modulePath.resolve("pom.xml")
@@ -120,7 +122,6 @@ object Convert {
       val gradle = bld.gradle(identifier, bldDependencies, destinationRoot, modulePath, modulePaths, moduleOutputs, exclusions)
       val gradlePath = modulePath.resolve("build.gradle")
 
-      Files.createDirectories(modulePath)
       Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 
