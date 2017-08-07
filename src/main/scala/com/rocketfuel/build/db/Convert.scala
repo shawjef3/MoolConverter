@@ -121,7 +121,7 @@ object Convert {
         moduleOuts + (output -> bld.id)
       }
 
-      val gradle = bld.gradle(identifier, bldDependencies, destinationRoot, modulePath, modulePaths, moduleOutputs, exclusions)
+      val gradle = bld.gradle()
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)

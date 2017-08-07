@@ -2,7 +2,7 @@ package com.rocketfuel.build.db.mool
 
 import java.nio.file.Path
 import com.rocketfuel.build.db._
-import com.rocketfuel.build.db.gradle.GradleConvert
+import com.rocketfuel.build.db.gradle.{GradleConvert, Projects}
 import com.rocketfuel.build.db.mvn.{Dependency, Exclusion, Identifier, Parents}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
@@ -98,25 +98,8 @@ case class Bld(
     </project>
   }
 
-  def gradle(
-    identifier: Identifier,
-    dependencies: Vector[Dependency],
-    projectRoot: Path,
-    moduleRoot: Path,
-    modulePaths: Map[Int, String],
-    moduleOutputs: Map[String, Int],
-    exclusions: Map[Int, Map[Int, Set[Exclusion]]]
-  ): String = {
-    GradleConvert.gradle(
-      identifier = identifier,
-      prjBld = this,
-      dependencies = dependencies,
-      projectRoot = projectRoot,
-      moduleRoot = moduleRoot,
-      modulePaths = modulePaths,
-      moduleOutputs = moduleOutputs,
-      exclusions = exclusions
-    )
+  def gradle(): String = {
+    ???
   }
 
 }
