@@ -6,11 +6,9 @@ import java.nio.file._
 
 object MainConvert extends App {
 
-  val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
+  val moolRoot = Paths.get("/tmp/vostok")
 
-  val destinationRoot = Paths.get("/tmp").resolve("mool-conversion")
-
-  val pomsPath = destinationRoot.resolve("parents")
+  val destinationRoot = Paths.get("/tmp/mool-conversion")
 
   //TODO: delete destinationRoot
   val dbConfig = new HikariConfig()
@@ -21,10 +19,9 @@ object MainConvert extends App {
 
   pool.withConnection { implicit connection =>
     Convert.files(moolRoot, destinationRoot)
+    Convert.testFiles(moolRoot, destinationRoot)
 
     Convert.poms(destinationRoot)
   }
-
-  Convert.gridModeling(destinationRoot)
 
 }

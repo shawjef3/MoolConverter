@@ -8,9 +8,10 @@ import com.zaxxer.hikari.HikariConfig
 
 object MainGradleConvert extends App {
 
-  val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
+  // val moolRoot = Paths.get(System.getProperty("user.home")).resolve("git/data/vostok")
+  val moolRoot = Paths.get("/tmp/vostok")
 
-  val destinationRoot = moolRoot.resolve("projects")
+  val destinationRoot = Paths.get("/tmp/gradle-conversion")
 
   //TODO: delete destinationRoot
   val dbConfig = new HikariConfig()
@@ -20,14 +21,12 @@ object MainGradleConvert extends App {
   val pool = Pool(dbConfig)
 
   pool.withConnection { implicit connection =>
-//    GradleConvert.files(moolRoot, destinationRoot)
-//    GradleConvert.rootBuildFiles(moolRoot)
-//    GradleConvert.builds(moolRoot, destinationRoot)
-    Convert.files(moolRoot, destinationRoot)
-//    SimpleGradleConvert.rootBuildFiles(moolRoot)
+    SimpleGradleConvert.files(moolRoot, destinationRoot.resolve("projects"))
+    Convert.testFiles(moolRoot, destinationRoot.resolve("projects"))
+
     SimpleGradleConvert.builds(moolRoot, destinationRoot)
   }
 
-  Convert.gridModeling(destinationRoot)
+  // Convert.gridModeling(destinationRoot)
 
 }

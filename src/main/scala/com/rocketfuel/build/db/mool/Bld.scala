@@ -3,7 +3,7 @@ package com.rocketfuel.build.db.mool
 import java.nio.file.{Files, Path, StandardOpenOption}
 
 import com.rocketfuel.build.db._
-import com.rocketfuel.build.db.mvn.{Dependency, Identifier, Parents}
+import com.rocketfuel.build.db.mvn.{Dependency, Exclusion, Identifier, Parents}
 import com.rocketfuel.build.mool.MoolPath
 import com.rocketfuel.sdbc.PostgreSql._
 
@@ -19,10 +19,19 @@ case class Bld(
   artifactId: Option[String] = None,
   version: Option[String] = None,
   repoUrl: Option[String] = None,
-  classifier: Option[String] = None
+  classifier: Option[String] = None,
+  filePackage: Option[String] = None,
+  testGroups: Option[String] = None,
+  mainClass: Option[String] = None
 ) {
 
-  def pom(identifier: Identifier, dependencies: Vector[Dependency], projectRoot: Path, moduleRoot: Path): Elem = {
+  def pom(
+    identifier: Identifier,
+    dependencies: Vector[Dependency],
+    projectRoot: Path,
+    moduleRoot: Path,
+    exclusions: Map[Int, Map[Int, Set[Exclusion]]]
+  ): Elem = {
     val parentArtifact = Parents.parent(this)
     val parentNode = parentArtifact.parentXml(projectRoot, moduleRoot)
 
@@ -46,7 +55,7 @@ case class Bld(
       <dependencies>
         {
         for (dependency <- dependencies) yield
-          dependency.mavenDefinition
+          dependency.mavenDefinition(exclusions.getOrElse(id, Map.empty))
         }
       </dependencies>
 
@@ -54,6 +63,38 @@ case class Bld(
         <maven.compiler.source>{pomJavaVersion}</maven.compiler.source>
         <maven.compiler.target>{pomJavaVersion}</maven.compiler.target>
       </properties>
+
+      {
+      //BUILD_ROOT part of the fix for athena testdata
+      if (path.contains("athena")) {
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>me.jeffshaw.scalatest</groupId>
+              <artifactId>scalatest-maven-plugin</artifactId>
+              <version>2.0.0-M1</version>
+              <configuration>
+                <environmentVariables>
+                  <BUILD_ROOT>
+                  {
+                  //work around for needing a literal ${} inside of xml.
+                  xml.Text("${basedir}")
+                  }
+                  </BUILD_ROOT>
+                </environmentVariables>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+      }
+      }
+
+      {
+      //fix for resources being loaded using the file system instead of as resources.
+      if (Bld.requiresTestWithExtractedDependencies.contains(path)) {
+        Bld.testWithExtractedDependencies
+      }
+      }
 
     </project>
   }
@@ -73,7 +114,10 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       "artifact_id" -> "artifactId",
       "version" -> "version",
       "repo_url" -> "repoUr",
-      "classifier" -> "classifier"
+      "classifier" -> "classifier",
+      "file_package" -> "filePackage",
+      "test_groups" -> "testGroups",
+      "main_class" -> "mainClass"
     )
 
   private val selectList = {
@@ -85,11 +129,19 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
     Select[Bld](s"SELECT $selectList FROM mool_dedup.blds")
 
   //Blds which aren't references to maven artifacts.
-  val localBlds =
+  val locals =
     Select[Bld](all.originalQueryText + " WHERE group_id IS NULL")
 
+  val athenaTests =
+    Select[Bld](
+      locals.originalQueryText +
+        """ AND rule_type LIKE '%test'
+          |AND path[1:5] = array['java', 'com', 'rocketfuel', 'modeling', 'athena']
+          |""".stripMargin
+    )
+
   override val selectByIdSql: CompiledStatement =
-    s"SELECT $selectList FROM blds WHERE id = @id"
+    s"SELECT $selectList FROM mool_dedup.blds WHERE id = @id"
 
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
@@ -103,7 +155,10 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         |  artifact_id text,
         |  version text,
         |  repo_url text,
-        |  classifier text
+        |  classifier text,
+        |  file_package text,
+        |  test_groups text,
+        |  main_class text
         |)
         |""".stripMargin
     )
@@ -121,7 +176,10 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  artifact_id,
       |  version,
       |  repo_url,
-      |  classifier
+      |  classifier,
+      |  file_package,
+      |  test_groups,
+      |  main_class
       |) VALUES (
       |  @path,
       |  @ruleType,
@@ -131,7 +189,10 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  @artifactId,
       |  @version,
       |  @repoUrl,
-      |  @classifier
+      |  @classifier,
+      |  @filePackage,
+      |  @testGroups,
+      |  @mainClass
       |) RETURNING id
       |""".stripMargin
 
@@ -147,12 +208,63 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         groupId = bld.maven_specs.map(_.group_id),
         version = bld.maven_specs.map(_.version),
         repoUrl = bld.maven_specs.map(_.repo_url),
-        classifier = bld.maven_specs.flatMap(_.classifier)
+        classifier = bld.maven_specs.flatMap(_.classifier),
+        filePackage = bld.file_package,
+        testGroups = bld.test_groups.map(_.mkString(",")),
+        mainClass =  bld.main_class
       )
     )
   }
 
   val selectByPathSql: Select[Bld] =
     Select[Bld](all.originalQueryText + " WHERE path = @path")
+
+  val requiresTestWithExtractedDependencies =
+    Set(
+      Seq("java", "com", "rocketfuel", "grid", "lookup", "dim", "DimTablesTest"),
+      Seq("java", "com", "rocketfuel", "grid", "common", "hbase", "keylistformat", "filefetcher", "KeyValueFileFetcherTest")
+    )
+
+  val testWithExtractedDependencies: xml.Elem = {
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <executions>
+            <execution>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>unpack-dependencies</goal>
+              </goals>
+              <configuration>
+                <includeGroupIds>com.rocketfuel.grid</includeGroupIds>
+                <excludes>
+                {
+                //work around for needing a literal /* instead of xml.
+                xml.Text("**/*.class")
+                }
+                </excludes>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <!-- run the tests with the unpacked dependencies in the classpath. -->
+            <!-- see https://maven.apache.org/plugins/maven-dependency-plugin/unpack-dependencies-mojo.html -->
+            <workingDirectory>
+              {
+              //work around for needing a literal ${} inside of xml.
+              xml.Text("${project.build.directory}/dependency")
+              }
+            </workingDirectory>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  }
 
 }
