@@ -19,19 +19,15 @@ object Deploy extends Deployable {
       mool.IsAlias +
       mool.dedup.Deploy +
       mvn.Schema +
+      gradle.Schema +
+      gradle.BldJoins +
       mvn.ModulePath +
       mvn.Copy +
       mvn.Identifier +
       mvn.DependencySupplements +
       mvn.Dependency +
       mvn.Exclusion +
-      mvn.Dependency +
-      gradle.Schema +
-      gradle.BuildTree +
-      gradle.ProjectMapping +
-      gradle.GradleCopy +
-      gradle.Dependency +
-      gradle.Library
+      gradle.GradleCopy
 
   override def deploy()(implicit connection: Connection): Unit =
     deploy.deploy()

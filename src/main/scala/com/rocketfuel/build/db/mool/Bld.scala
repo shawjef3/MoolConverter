@@ -19,7 +19,9 @@ case class Bld(
   version: Option[String] = None,
   repoUrl: Option[String] = None,
   classifier: Option[String] = None,
-  filePackage: Option[String] = None
+  filePackage: Option[String] = None,
+  testGroups: Option[String] = None,
+  mainClass: Option[String] = None
 ) {
 
   def pom(
@@ -134,7 +136,9 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       "version" -> "version",
       "repo_url" -> "repoUr",
       "classifier" -> "classifier",
-      "file_package" -> "filePackage"
+      "file_package" -> "filePackage",
+      "test_groups" -> "testGroups",
+      "main_class" -> "mainClass"
     )
 
   private val selectList = {
@@ -158,7 +162,7 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
     )
 
   override val selectByIdSql: CompiledStatement =
-    s"SELECT $selectList FROM blds WHERE id = @id"
+    s"SELECT $selectList FROM mool_dedup.blds WHERE id = @id"
 
   override def deploy()(implicit connection: Connection): Unit =
     Ignore.ignore(
@@ -173,7 +177,9 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         |  version text,
         |  repo_url text,
         |  classifier text,
-        |  file_package text
+        |  file_package text,
+        |  test_groups text,
+        |  main_class text
         |)
         |""".stripMargin
     )
@@ -192,7 +198,9 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  version,
       |  repo_url,
       |  classifier,
-      |  file_package
+      |  file_package,
+      |  test_groups,
+      |  main_class
       |) VALUES (
       |  @path,
       |  @ruleType,
@@ -203,7 +211,9 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
       |  @version,
       |  @repoUrl,
       |  @classifier,
-      |  @filePackage
+      |  @filePackage,
+      |  @testGroups,
+      |  @mainClass
       |) RETURNING id
       |""".stripMargin
 
@@ -220,7 +230,9 @@ object Bld extends Deployable with InsertableToValue[Bld] with SelectableById[Bl
         version = bld.maven_specs.map(_.version),
         repoUrl = bld.maven_specs.map(_.repo_url),
         classifier = bld.maven_specs.flatMap(_.classifier),
-        filePackage = bld.file_package
+        filePackage = bld.file_package,
+        testGroups = bld.test_groups.map(_.mkString(",")),
+        mainClass =  bld.main_class
       )
     )
   }
