@@ -103,7 +103,7 @@ object DependencyTree {
     val bldPaths =
       for {
         (relCfgPath, relCfg) <- model.relCfgs
-        artifact <- relCfg.`jar-with-dependencies`
+        artifact <- List(relCfg.`jar-with-dependencies`, relCfg.deploy).flatten
       } yield {
         val bldPath = artifact.targetPath
         bldPath -> (relCfgPath, model.blds(bldPath))

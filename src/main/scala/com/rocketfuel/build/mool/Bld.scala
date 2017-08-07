@@ -38,7 +38,9 @@ case class Bld(
 
   def compileDepPaths(bldPath: MoolPath): Vector[MoolPath] =
     for {
-      compileDep <- compileDeps.getOrElse(Vector.empty)
+      // TODO(rkubacki): this will add also non-Java deps, trim it
+      maybeDeps <- Vector(compileDeps, package_modules, package_tests)
+      compileDep <- maybeDeps.getOrElse(Vector.empty)
     } yield Bld.relativePath(bldPath, compileDep)
 
   def extractDepPaths(bldPath: MoolPath): Vector[MoolPath] =
