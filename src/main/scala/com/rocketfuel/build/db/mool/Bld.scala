@@ -102,7 +102,8 @@ case class Bld(
     projectRoot: Path,
     moduleRoot: Path,
     modulePaths: Map[Int, String],
-    moduleOutputs: Map[String, Int]
+    moduleOutputs: Map[String, Int],
+    exclusions: Map[Int, Map[Int, Set[Exclusion]]]
   ): String = {
     GradleConvert.gradle(
       identifier = identifier,
@@ -111,7 +112,8 @@ case class Bld(
       projectRoot = projectRoot,
       moduleRoot = moduleRoot,
       modulePaths = modulePaths,
-      moduleOutputs = moduleOutputs
+      moduleOutputs = moduleOutputs,
+      exclusions = exclusions
     )
   }
 

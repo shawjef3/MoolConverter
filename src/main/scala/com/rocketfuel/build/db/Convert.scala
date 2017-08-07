@@ -104,20 +104,23 @@ object Convert {
       val path = modulePaths(bld.id)
       val modulePath = destinationRoot.resolve(path)
 
+      //maven part
       val pom = bld.pom(identifier, bldDependencies, destinationRoot, modulePath, exclusions)
       val pomPath = modulePath.resolve("pom.xml")
 
+      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+
+      //gradle part
       val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
         val identifier = identifiers(bld.id)
         val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
         moduleOuts + (output -> bld.id)
       }
 
-      val gradle = bld.gradle(identifier, bldDependencies, destinationRoot, modulePath, modulePaths, moduleOutputs)
+      val gradle = bld.gradle(identifier, bldDependencies, destinationRoot, modulePath, modulePaths, moduleOutputs, exclusions)
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)
-      Files.write(pomPath, pom.toString.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
       Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
     }
 

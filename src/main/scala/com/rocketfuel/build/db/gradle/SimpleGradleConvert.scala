@@ -33,6 +33,8 @@ object SimpleGradleConvert extends Logger {
 
     val localBlds = Bld.locals.vector()
 
+    val exclusions = Exclusion.byBldIdAndDependencyId()
+
     var includedBuilds = List[(String, Seq[String])]()
     val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
       val identifier = identifiers(bld.id)
@@ -50,7 +52,7 @@ object SimpleGradleConvert extends Logger {
       includedBuilds = (path, bld.path) :: includedBuilds
       val modulePath = destinationRoot.resolve(path.replaceAll("-", "/"))
       val gradle = GradleConvert.gradle(identifier, bld, bldDependencies, destinationRoot,
-        modulePath, modulePaths, moduleOutputs)
+        modulePath, modulePaths, moduleOutputs, exclusions)
       val gradlePath = modulePath.resolve("build.gradle")
 
       Files.createDirectories(modulePath)

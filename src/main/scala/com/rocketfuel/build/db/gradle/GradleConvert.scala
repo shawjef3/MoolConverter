@@ -105,7 +105,8 @@ object GradleConvert extends Logger {
 
 
   def gradle(identifier: Identifier, prjBld: Bld, dependencies: Vector[MvnDependency], projectRoot: Path,
-             moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int]) = {
+             moduleRoot: Path, modulePaths: Map[Int, String], moduleOutputs: Map[String, Int],
+             exclusions: Map[Int, Map[Int, Set[Exclusion]]]) = {
     def setupBuildGradle = {
       prjBld.ruleType match {
         case "java_proto_lib" =>
@@ -142,7 +143,7 @@ object GradleConvert extends Logger {
           if (identifier.artifactId.contains("hbase.testutils")) {
             logger.info(s"  3rd party ${identifier} -> ${dep}")
           }
-          build.copy(compileDeps = build.compileDeps + dep.gradleDependency)
+          build.copy(compileDeps = build.compileDeps + dep.gradleDependency(exclusions.getOrElse(prjBld.id, Map.empty)))
       }
     }
 

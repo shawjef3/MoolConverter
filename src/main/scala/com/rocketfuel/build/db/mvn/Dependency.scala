@@ -46,7 +46,7 @@ case class Dependency(
     s"${groupId}:${artifactId}:${version}"
   }
 
-  lazy val gradleDependency: String = {
+  def gradleDependency(exclusions: Map[Int, Set[Exclusion]]): String = {
     val configuration = scope match {
       case "provided" => "compileOnly"
       case "test" => "testCompile"
@@ -56,7 +56,15 @@ case class Dependency(
       case Some("test-jar") => ":tests"
       case _ => ""
     }
-    s"  ${configuration} '${gradleDefinition}${classifier}'"
+
+    val dependencyExclusions: Set[Exclusion] =
+      targetId.map(exclusions.getOrElse(_, Set.empty)).getOrElse(Set.empty)
+
+    val base = s"  ${configuration} '${gradleDefinition}${classifier}'"
+
+    if (dependencyExclusions.nonEmpty) {
+      base + dependencyExclusions.map(_.gradleDefinition).mkString("{\n", "\n", "\n}")
+    } else base
   }
 }
 

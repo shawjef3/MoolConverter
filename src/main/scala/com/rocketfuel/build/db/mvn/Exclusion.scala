@@ -18,6 +18,9 @@ case class Exclusion(
       <artifactId>{excludedArtifactId}</artifactId>
     </exclusion>
 
+  lazy val gradleDefinition: String =
+    s"exclude group: $excludedGroupId, module: $excludedArtifactId"
+
 }
 
 object Exclusion extends Deployable {
