@@ -10,8 +10,8 @@ import com.rocketfuel.sdbc.PostgreSql._
 
 object SmallProjectFilter extends (String => Boolean) {
   def apply(path: String): Boolean = {
-    SmallProjectFilter.exact.contains(path) ||
-      SmallProjectFilter.prefixes.exists(prefix => path.startsWith(prefix))
+    exact.contains(path) ||
+      prefixes.exists(prefix => path.startsWith(prefix))
   }
 
   val prefixes =
@@ -164,19 +164,34 @@ object SimpleGradleConvert extends Logger {
 
         Files.createDirectories(modulePath)
         Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
-        (path, blds.map(_.path.mkString("-")))
+        (path, blds.map(_.path.mkString("-")).toString)
       }
 
     val settingsGradle = destinationRoot.resolve("settings.gradle")
-    val settings = includedBuilds.toSeq.sortBy {_._1}.foldLeft("") { (buffer, prjNames) =>
-      val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
-      buffer + s"include ':${prjNames._1}'$comment\n"
-    }
+    val settings = createSettings(includedBuilds.keySet, includedBuilds)
 
     Files.write(settingsGradle,
-      (settings + loadResource("settings_end.gradle")).getBytes,
+      settings.getBytes,
       StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.CREATE)
-
   }
+
+  def createSettings(
+    projectNames: Set[String],
+    projectComments: Map[String, String] = Map.empty
+  ): String = {
+    val includes =
+      for (projectName <- projectNames) yield
+        "include '" + projectName + {
+          projectComments.get(projectName) match {
+            case Some(comment) =>
+              " /* " + comment + " */"
+            case None =>
+              ""
+          }
+        }
+    includes.mkString("", "\n", "\n") + settingsEnd
+  }
+
+  val settingsEnd = loadResource("settings_end.gradle")
 }
