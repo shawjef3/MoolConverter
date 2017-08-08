@@ -141,30 +141,35 @@ object SimpleGradleConvert extends Logger {
     }
     val moduleBlds = localBlds.groupBy { bld => Projects.pathToModulePath(bld.path) }
 
-    var includedBuilds = List[(String, Seq[String])]()
     val moduleOutputs = localBlds.foldLeft(Map.empty[String, Int]) { case (moduleOuts, bld) =>
       val identifier = identifiers(bld.id)
       val output = s"${identifier.groupId}:${identifier.artifactId}:${identifier.version}"
       moduleOuts + (output -> bld.id)
     }
+
     val convertor = new GradleConvert(projectsRoot, modulePaths, moduleOutputs)
-    // for ((path, blds) <- moduleBlds) {
-    for ((path, blds) <- moduleBlds.filter { case (path, bld) => SmallProjectFilter(path) }) {
-      val bldsWithDeps = blds
-        .map { bld => (bld, dependencies.getOrElse(bld.id, Vector.empty))}
-        .toMap
 
-      includedBuilds = (path, blds.map(_.path.mkString("-"))) :: includedBuilds
-      val modulePath = projectsRoot.resolve(path)
-      val gradle = convertor.gradle(path, bldsWithDeps, modulePath, exclusions)
-      val gradlePath = modulePath.resolve("build.gradle")
+    val includedBuilds =
+      for {
+        (path, blds) <- moduleBlds
+        if SmallProjectFilter(path)
+      } yield {
+        val bldsWithDeps =
+          blds
+          .map { bld => (bld, dependencies.getOrElse(bld.id, Vector.empty))}
+          .toMap
 
-      Files.createDirectories(modulePath)
-      Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
-    }
+        val modulePath = projectsRoot.resolve(path)
+        val gradle = convertor.gradle(path, bldsWithDeps, modulePath, exclusions)
+        val gradlePath = modulePath.resolve("build.gradle")
+
+        Files.createDirectories(modulePath)
+        Files.write(gradlePath, gradle.getBytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+        (path, blds.map(_.path.mkString("-")))
+      }
 
     val settingsGradle = destinationRoot.resolve("settings.gradle")
-    val settings = includedBuilds.sortBy {_._1}.foldLeft("") { (buffer, prjNames) =>
+    val settings = includedBuilds.toSeq.sortBy {_._1}.foldLeft("") { (buffer, prjNames) =>
       val comment = if (prjNames._1 == prjNames._2) "" else s" // ${prjNames._2}"
       buffer + s"include ':${prjNames._1}'$comment\n"
     }
