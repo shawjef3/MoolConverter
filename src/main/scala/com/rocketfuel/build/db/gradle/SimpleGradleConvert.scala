@@ -1,8 +1,8 @@
 package com.rocketfuel.build.db.gradle
 
 import java.nio.file._
-
 import com.rocketfuel.build.Logger
+import com.rocketfuel.build.db.Copy
 import com.rocketfuel.build.db.gradle.GradleConvert.loadResource
 import com.rocketfuel.build.db.mvn._
 import com.rocketfuel.build.db.mool.Bld
@@ -117,8 +117,8 @@ object SmallProjectFilter extends (String => Boolean) {
 object SimpleGradleConvert extends Logger {
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val copies = GradleCopy.all.vector().map(GradleCopy.toCopy(_)).toSet
-    Copy.copy(copies, moolRoot, destinationRoot)
+    val copies = GradleCopy.all.vector().toSet
+    Copy.copyFiles(copies, moolRoot, destinationRoot)
   }
 
   def builds(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
@@ -130,8 +130,7 @@ object SimpleGradleConvert extends Logger {
       }
     }.toMap
 
-    val dependencies =
-      com.rocketfuel.build.db.mvn.Dependency.list.vector().groupBy(_.sourceId)
+    val dependencies = Dependency.list.vector().groupBy(_.sourceId)
 
     val exclusions = Exclusion.byBldIdAndDependencyId()
 

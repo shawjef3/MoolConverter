@@ -22,7 +22,7 @@ object Deploy extends Deployable {
       gradle.Schema +
       gradle.BldJoins +
       mvn.ModulePath +
-      mvn.Copy +
+      mvn.MavenCopy +
       mvn.Identifier +
       mvn.DependencySupplements +
       mvn.Dependency +

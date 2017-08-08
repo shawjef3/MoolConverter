@@ -1,7 +1,7 @@
 package com.rocketfuel.build.db
 
 import java.nio.file._
-import com.rocketfuel.build.db.mvn.{Copy, Identifier, ModulePath, Parents}
+import com.rocketfuel.build.db.mvn.{MavenCopy, ModulePath, Parents}
 import com.rocketfuel.sdbc.PostgreSql._
 
 object Convert {
@@ -43,8 +43,8 @@ object Convert {
   }
 
   def files(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
-    val copies = Copy.all.vector().toSet
-    Copy.copy(copies, moolRoot, destinationRoot)
+    val copies = MavenCopy.all.vector().toSet
+    Copy.copyFiles(copies, moolRoot, destinationRoot)
   }
 
   def testFiles(moolRoot: Path, destinationRoot: Path)(implicit connection: Connection): Unit = {
